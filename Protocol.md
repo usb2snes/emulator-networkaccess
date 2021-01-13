@@ -11,6 +11,10 @@ Load game, stop the emulation, reset the emulation
 List all core memory available to be able to read/write them
 
 
+## Starting port
+
+65400
+
 ## Command format
 
 `KEYWORD<space>[list of args with ;]\n`
@@ -27,14 +31,24 @@ key1:value2\n
 
 A repeat of the first key is a list.
 
-binary data :
+binary data transfert to client :
+Success :
 
-`<ok byte, 0 : ok, N+ : nok><4 bytes size><datas>`
+`<0><4 bytes size><datas>`
+
+error :
+ `<1> error:blablabla\n\n`
 
 
-`OK/KO` for success of commands
+`status:OK\n\n` for success of commands
+
+```
+status:NOK\n
+error:my little error\n
+\n```
 
 
+empty replies are `none:none`
 
 ## Commands
 
@@ -47,7 +61,7 @@ Gives information about the emulator (name, version, etc...)
 Returns what state the emulator is.
 
 ```
-state:<running|paused|menu>
+state:<running|paused|nogame>
 ```
 
 ### CORES_LIST <opt>
