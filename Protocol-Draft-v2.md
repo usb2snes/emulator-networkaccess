@@ -14,8 +14,8 @@ This is a draft. Feedback is welcome.
 
 ## TCP Port
 
-65400.
-If already in use increment by 1.
+65400,
+if already in use increment by 1.
 
 
 ## Command to Emulator
@@ -103,11 +103,8 @@ Gives information about the emulator
 ```
 name:<name>
 version:<version>
-game_name:<game_name>
-game_file:<path/to/game.rom>
 user_defined...
 ```
-
 **NOTE:** renamed from `EMU_INFOS` to `EMU_INFO`.
 
 ### EMU_STATUS
@@ -116,7 +113,9 @@ Returns what state the emulator is in.
 
 ```
 state:<running|paused|stopped|no_game>
+game:<game_id>
 ```
+`game_id` is optional, can be a name, filename or hash and is just to detect that the loaded game has changed.
 
 ### EMU_PAUSE, EMU_STOP, EMU_RESET, EMU_RESUME, EMU_RELOAD
 
