@@ -2,7 +2,7 @@
 
 The purpose of this protocol is to have a uniform way to communicate with emulators.
 
-See [README.md] for more.
+See [README.md](README.md) for more.
 
 This is a draft. Feedback is welcome.
 
