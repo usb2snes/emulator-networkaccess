@@ -226,3 +226,16 @@ If supported by the emulator, should behave like hitting a breakpoint.
 ### DEBUG_CONTINUE
 
 If supported by the emulator, should behave like the "continue" button when inside a breakpoint.
+
+### LOAD_STATE `<filename>`
+
+Load a savestate from filename.
+
+If the emulator only supports "quick" (not arbitrary filename) savestates,
+arbitrary filename support has to be added or left unsupported.
+
+There is no advantage to exposing "quick" savestates interface.
+
+### SAVE_STATE `<filename>`
+
+Make a savestate and store to filename.
