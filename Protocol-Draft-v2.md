@@ -1,6 +1,8 @@
 # Emulator NetworkAccess protocol
 
-The purpose of this protocol is to have a unified way to communicate with emulators.
+The purpose of this protocol is to have a uniform way to communicate with emulators.
+
+See [README.md] for more.
 
 This is a draft. Feedback is welcome.
 
@@ -21,8 +23,25 @@ if already in use increment by 1.
 ## Command to Emulator
 
 ```
-KEYWORD[<space>list of args with ;]\n
+KEYWORD[ <arguments separated by ';'>]\n
 ```
+
+### Command Naming
+
+Commands are all upper case ASCII. Multiple words are separated by `_`.
+
+For `LOAD` and `SAVE` the namespace is appended (e.g. `LOAD_GAME`).\
+For other commands the namespace is prepended (e.g. `GAME_INFO`).
+
+### Command Arguments
+
+If arguments are given, command and arguments are separated by a single space.
+Arguments are command-specific, by convention arguments are separated by `;`.
+
+### Number Arguments
+
+Numbers in arguments can bet transferred decimal without prefix or hexadecimal
+with `$` prefix. So `256` is the same as `$100`.
 
 ### Binary Transfer to Emulator
 
