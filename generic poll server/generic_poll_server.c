@@ -18,7 +18,6 @@
 #ifdef _WIN32
 #include <winsock2.h>
 #include <process.h>
-#define ioctl ioctlsocket
 #define close(h) if(h){closesocket(h);}
 #define write(a,b,c) send(a, b, c, 0)
 #define poll(a, b, c) WSAPoll(a, b, c);
@@ -32,6 +31,9 @@ typedef LPWSAPOLLFD poll_fd_t;
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <time.h>
+#include <sys/ioctl.h>
+#define ioctlsocket ioctl
 #endif
 
 #ifdef _WIN32

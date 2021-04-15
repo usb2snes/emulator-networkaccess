@@ -3,6 +3,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <stdbool.h>
 
 #include "dummy.h"
 #include "emulator_network_access_defines.h"
