@@ -1,0 +1,17 @@
+# exclude test files
+dummy/Dummy server/usb2snes-testlorom.sfc
+dummy/Dummy server/usb2snes-testlorom
+
+# exclude build output
+dummy/Dummy server/dummyserver
+
+# f cmake
+**/CMakeFiles
+**/CMakeCache.txt
+**/cmake_install.cmake
+dummy/Dummy server/Makefile
+
+# exclude cache files
+*~
+.DS_Store
+thumbs.db
