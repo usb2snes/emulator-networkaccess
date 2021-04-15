@@ -36,6 +36,10 @@ typedef LPWSAPOLLFD poll_fd_t;
 #define ioctlsocket ioctl
 #endif
 
+#ifndef MIN
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+#endif
+
 #ifdef _WIN32
 
 /* On windows, recv return an error when a non blocking socket
@@ -318,7 +322,7 @@ static void	preprocess_data(generic_poll_server_client* client)
                         send_error(client->socket_fd, "Expected binary data");
                         //FIXME reinit state and close the connection?
                     }
-                    unsigned int to_copy_s = min(5 - client->write_handled_size, client->readed_size - read_pos);
+                    unsigned int to_copy_s = MIN(5 - client->write_handled_size, client->readed_size - read_pos);
                     if (client->write_handled_size == 0) // we don't want the byte that tell us it's binary.
                     {
                         to_copy_s -= 1;
@@ -416,6 +420,7 @@ static bool read_client_data(SOCKET fd)
 }
 
 long long milliseconds_now() {
+#if defined WIN32 || defined _WIN32
     static LARGE_INTEGER s_frequency;
     static BOOL s_use_qpc = TRUE;
 	QueryPerformanceFrequency(&s_frequency);
@@ -426,6 +431,11 @@ long long milliseconds_now() {
     } else {
         return GetTickCount();
     }
+#else
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (long long)(ts.tv_nsec / 1000000) + ((long long)ts.tv_sec * 1000ll);
+#endif
 }
 
 
