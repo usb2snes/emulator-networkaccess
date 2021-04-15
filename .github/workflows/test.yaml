@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - '**'
+      - '!**.md'
+      - '!.github/workflows/**'
+      - '.github/workflows/test.yaml'
+  pull_request:
+    branches-ignore:
+      - 'screenshots'
+    paths:
+      - '**'
+      - '!**.md'
+      - '!.github/workflows/**'
+      - '.github/workflows/test.yaml'
+
+jobs:
+
+  test-ubuntu:
+
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Build
+      run: |
+        cd "dummy/Dummy server"
+        cmake -DCMAKE_C_FLAGS_DEBUG="-Wall -Werror" CMakeLists.txt
+        cmake --build .
+
+  test-windows:
+
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: recursive
+    - name: Build
+      run: |
+        cd "dummy/Dummy server"
+        cmake CMakeLists.txt
+        cmake --build .
