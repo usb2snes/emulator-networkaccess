@@ -129,9 +129,10 @@ void    prep_memory(const char* romfile, const char* savestate)
     snes9x_152_savestate_get_ram_wram(savestate);
 }
 
-char* rom_path;
+const char* rom_path;
+const char* state_path;
 
-int	main(int ac, char *ag[]) {
+int	main(int argc, char *argv[]) {
 #ifdef _WIN32
 	WSADATA wsadata;
 	if (WSAStartup(MAKEWORD(1, 0), &wsadata) != 0)
@@ -141,16 +142,25 @@ int	main(int ac, char *ag[]) {
 	}
 #endif
 
-    if (false && ac != 3)
+    if (argc != 3)
     {
-        fprintf(stderr, "dummyserver <romfile> <savestate>");
+#if !defined DEFAULT_ROM || !defined DEFAULT_STATE
+        fprintf(stderr, "Usage: dummyserver <romfile> <savestate>\n");
         exit(1);
+#else
+        rom_path = DEFAULT_ROM;
+        state_path = DEFAULT_STATE;
+#endif
     }
-	rom_path = "F:\\Project\\QUsb2snes\\tests\\usb2snes-tests\\custom rom\\usb2snes-testlorom.sfc";
-    prep_memory(rom_path, "F:\\Tmp\\usb2snes-testlorom");
-    printf("Starting Dummy Server\n");
-	generic_poll_server_start();
-
+    else
+    {
+        rom_path = argv[1];
+        state_path = argv[2];
+    }
+    prep_memory(rom_path, state_path);
+    printf("Starting Dummy Server: %s %s\n",
+        rom_path, state_path);
+    generic_poll_server_start();
 }
 
 static void write_to_socket(SOCKET socket, const char* str)
