@@ -40,7 +40,7 @@ const generic_emu_nwa_commands_map_t generic_emu_mwa_map = {
 };
 
 const unsigned int generic_emu_mwa_map_size = 20;
-void (*generic_poll_server_write_function)(SOCKET, char*, uint32_t) = &write_to_memory;
+bool (*generic_poll_server_write_function)(SOCKET, char*, uint32_t) = &write_to_memory;
 
 
 char*	hexString(const char* str, const unsigned int size)
@@ -292,7 +292,7 @@ bool    write_to_memory(SOCKET socket, char* data, uint32_t size)
 		}
 	}
     if (size == 0)
-        return ;
+        return true; // FIXME: or false?
     memcpy(memory_to_write + offset_to_write, data, size);
     size_written += size;
     s_debug("Writing to memory : %d - %d/%d\n", size, size_written, size_to_write);
