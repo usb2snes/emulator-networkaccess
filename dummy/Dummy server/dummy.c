@@ -127,6 +127,7 @@ void    prep_memory(const char* romfile, const char* savestate)
     snes9x_152_savestate_get_ram_wram(savestate);
 }
 
+char* rom_path;
 
 int	main(int ac, char *ag[]) {
 #ifdef _WIN32
@@ -143,7 +144,8 @@ int	main(int ac, char *ag[]) {
         fprintf(stderr, "dummyserver <romfile> <savestate>");
         exit(1);
     }
-    prep_memory("F:\\Project\\QUsb2snes\\tests\\usb2snes-tests\\custom rom\\usb2snes-testlorom.sfc", "F:\\Tmp\\usb2snes-testlorom");
+	rom_path = "F:\\Project\\QUsb2snes\\tests\\usb2snes-tests\\custom rom\\usb2snes-testlorom.sfc";
+    prep_memory(rom_path, "F:\\Tmp\\usb2snes-testlorom");
     printf("Starting Dummy Server\n");
 	generic_poll_server_start();
 
@@ -154,13 +156,15 @@ static void write_to_socket(SOCKET socket, const char* str)
     write(socket, str, strlen(str));
 }
 
-bool dummy_emu_info(SOCKET socket, char ** args)
+bool dummy_emu_info(SOCKET socket, char ** args, int ac)
 {
-    write_to_socket(socket, "\nname:Dummy Emulator\nversion:0.1\n\n");
+	send_full_hash_reply(socket, 2, 
+							"name", "Dummy emulator",
+						    "version", "0.1");
 	return true;
 }
 
-bool dummy_emu_status(SOCKET socket, char ** args)
+bool dummy_emu_status(SOCKET socket, char ** args, int ac)
 {
     write_to_socket(socket, "\n");
     if (dummy_state == RUNNING)
@@ -169,73 +173,76 @@ bool dummy_emu_status(SOCKET socket, char ** args)
         write_to_socket(socket, "state:paused");
     if (dummy_state == STOPPED)
         write_to_socket(socket, "state:stopped");
-    write_to_socket(socket, "\ngame:dummy game\n\n");
+    write_to_socket(socket, "\ngame:Dummy game\n\n");
 	return true;
 }
 
-bool dummy_emu_pause(SOCKET socket, char ** args)
+bool dummy_emu_pause(SOCKET socket, char ** args, int ac)
 {
     dummy_state = PAUSED;
 	return true;
 }
 
-bool dummy_emu_stop(SOCKET socket, char ** args)
+bool dummy_emu_stop(SOCKET socket, char ** args, int ac)
 {
     dummy_state = STOPPED;
 	return true;
 }
 
-bool dummy_emu_reset(SOCKET socket, char ** args)
+bool dummy_emu_reset(SOCKET socket, char ** args, int ac)
 {
 	return false;
 }
 
-bool dummy_emu_resume(SOCKET socket, char ** args)
+bool dummy_emu_resume(SOCKET socket, char ** args, int ac)
 {
     dummy_state = RUNNING;
 	return true;
 }
 
-bool dummy_emu_reload(SOCKET socket, char ** args)
+bool dummy_emu_reload(SOCKET socket, char ** args, int ac)
 {
 	return false;
 }
 
-bool dummy_load_game(SOCKET socket, char ** args)
+bool dummy_load_game(SOCKET socket, char ** args, int ac)
 {
 	return false;
 }
 
-bool dummy_game_info(SOCKET socket, char ** args)
+bool dummy_game_info(SOCKET socket, char ** args, int ac)
 {
-	return false;
+	send_full_hash_reply(socket, 3, "name", "Dummy Game",
+						"file", rom_path,
+						"region", "EU");
+	return true;
 }
 
-bool dummy_cores_list(SOCKET socket, char ** args)
+bool dummy_cores_list(SOCKET socket, char ** args, int ac)
 {
-    send_full_hash_reply(socket, 3, "plateform", "SNES", 
+    send_full_hash_reply(socket, 3, "platform", "SNES", 
                                     "name", "dummy core", 
                                     "version", "0.1"
     );
 	return true;
 }
 
-bool dummy_core_info(SOCKET socket, char ** args)
+bool dummy_core_info(SOCKET socket, char ** args, int ac)
 {
-    return dummy_cores_list(socket, args);
+    return dummy_cores_list(socket, args, ac);
 }
 
-bool dummy_core_current_info(SOCKET socket, char ** args)
+bool dummy_core_current_info(SOCKET socket, char ** args, int ac)
 {
-    return dummy_cores_list(socket, args);
+    return dummy_cores_list(socket, args, ac);
 }
 
-bool dummy_core_load(SOCKET socket, char ** args)
+bool dummy_core_load(SOCKET socket, char ** args, int ac)
 {
 	return false;
 }
 
-bool dummy_core_memories(SOCKET socket, char ** args)
+bool dummy_core_memories(SOCKET socket, char ** args, int ac)
 {
     send_full_hash_reply(socket, 6, "name", "WRAM", "access", "rw",
                                     "name", "SRAM", "access", "rw",
@@ -244,7 +251,7 @@ bool dummy_core_memories(SOCKET socket, char ** args)
     return true;
 }
 
-bool dummy_core_memory_read(SOCKET socket, char ** args)
+bool dummy_core_memory_read(SOCKET socket, char ** args, int ac)
 {
     char* ptr = NULL;
     size_t offset = generic_poll_server_get_offset(args[1]);
@@ -257,7 +264,8 @@ bool dummy_core_memory_read(SOCKET socket, char ** args)
     if (strcmp(args[0], "CARTROM") == 0)
         ptr = rom_memory;
     write(socket, "\0", 1);
-    write(socket, &size, 4);
+	uint32_t network_size = htonl(size);
+    write(socket, &network_size, 4);
     s_debug("Sending : %s\n", hexString(ptr + offset, size));
     write(socket, ptr + offset, size);
 	return true;
@@ -270,48 +278,69 @@ size_t  offset_to_write = 0;
 uint32_t size_written = 0;
 uint32_t size_to_write = 0;
 
-void    write_to_memory(SOCKET socket, char* data, uint32_t size)
+bool    write_to_memory(SOCKET socket, char* data, uint32_t size)
 {
+	if (size_written == 0)
+	{
+		if (size >= 4)
+		{
+			size_to_write = ntohl(*((uint32_t*) data));
+			data += 4;
+			size -= 4;
+		}
+	}
+    if (size == 0)
+        return ;
     memcpy(memory_to_write + offset_to_write, data, size);
     size_written += size;
+    s_debug("Writing to memory : %d - %d/%d\n", size, size_written, size_to_write);
     if (size_written == size_to_write)
     {
+        s_debug("Done Writing to memory\n");
         size_to_write = 0;
         size_written = 0;
         offset_to_write = 0;
         memory_to_write = NULL;
         write(socket, "\n\n", 2);
+        return true;
     }
+    return false;
 }
 
 
 // This does not handle all weird case sliver like
 
-bool dummy_core_memory_write(SOCKET socket, char ** args)
+bool dummy_core_memory_write(SOCKET socket, char ** args, int ac)
 {
-	if (strcmp(args[0], "WRAM") == 0)
+    s_debug("ARgs : %s\n", args[0]);
+    if (strcmp(args[0], "WRAM") == 0)
+    {
         memory_to_write = wram_memory;
+        s_debug("WRAM write\n");
+    }
     if (strcmp(args[0], "SRAM") == 0)
         memory_to_write = sram_memory;
     if (strcmp(args[0], "CARTROM") == 0)
         memory_to_write = rom_memory;
     offset_to_write = generic_poll_server_get_offset(args[1]);
-    size_to_write = atoi(args[2]);
+	size_to_write = 0;
+	if (ac == 3)
+		size_to_write = atoi(args[2]);
     size_written = 0;
     return true;
 }
 
-bool dummy_np(SOCKET socket, char ** args)
+bool dummy_np(SOCKET socket, char ** args, int ac)
 {
 	return false;
 }
 
-bool dummy_load_state(SOCKET socket, char ** args)
+bool dummy_load_state(SOCKET socket, char ** args, int ac)
 {
 	return false;
 }
 
-bool dummy_save_state(SOCKET socket, char ** args)
+bool dummy_save_state(SOCKET socket, char ** args, int ac)
 {
 	return false;
 }

@@ -20,7 +20,6 @@
 #include <process.h>
 #define ioctl ioctlsocket
 #define close(h) if(h){closesocket(h);}
-#define read(a,b,c) recv(a, b, c, 0)
 #define write(a,b,c) send(a, b, c, 0)
 #define poll(a, b, c) WSAPoll(a, b, c);
 typedef LPWSAPOLLFD poll_fd_t;
@@ -35,6 +34,25 @@ typedef LPWSAPOLLFD poll_fd_t;
 #include <unistd.h>
 #endif
 
+#ifdef _WIN32
+
+/* On windows, recv return an error when a non blocking socket
+*  has nothing left to read. This is wrapper to return 0 instead.
+*/
+static inline int	read(SOCKET s, char* b, int size)
+{
+	int res = recv(s, b, size, 0);
+	if (res == SOCKET_ERROR)
+	{
+		if (WSAGetLastError() == WSAEWOULDBLOCK)
+			return 0;
+		return -1;
+	}
+	return res;
+}
+#endif
+
+
 #include "generic_poll_server.h"
 
 static void __send_hash_reply(SOCKET socket, bool end, int key_count, va_list list)
@@ -43,12 +61,18 @@ static void __send_hash_reply(SOCKET socket, bool end, int key_count, va_list li
     {
         char* key = va_arg(list, char*);
         char* value = va_arg(list, char*);
-        char* buffer = (char*) malloc(strlen(key) + strlen(value) + 2);
-        snprintf(buffer, strlen(key) + strlen(value) + 2, "%s=%s\n", key, value);
-        write(socket, buffer, strlen(key) + strlen(value) + 2);
+		unsigned int size_kv = strlen(key) + strlen(value);
+        char* buffer = (char*) malloc(size_kv + 3);
+        snprintf(buffer, size_kv + 2, "%s:%s", key, value);
+		buffer[size_kv + 1] = '\n';
+        write(socket, buffer, size_kv + 2);
+		buffer[size_kv + 2] = 0;
+		s_debug("Sending : %s", buffer);
+		free(buffer);
         //dprintf(socket, "%s=%s\n", key, value); This does not exists on windows
     }
-    end && write(socket, "\n", 1);
+	if (end)
+		generic_poll_server_end_hash_reply(socket);
 }
 
 inline void    generic_poll_server_start_hash_reply(SOCKET socket)
@@ -127,8 +151,7 @@ static bool	add_to_clients(SOCKET client_fd)
 			clients[i].pending_size = 0;
             clients[i].pending_pos = 0;
 			clients[i].in_cmd = false;
-			clients[i].write_buffer = NULL;
-			clients[i].write_buffer_size = 0;
+			clients[i].write_handled_size = 0;
 			clients[i].write_expected_size = 0;
 			
 			return true;
@@ -146,7 +169,7 @@ static void send_error(SOCKET fd, const char* error_string)
     write(fd, tosend, towrite);
 }
 
-static void execute_command(generic_poll_server_client* client, char *cmd_str, char **args)
+static void execute_command(generic_poll_server_client* client, char *cmd_str, char **args, int args_count)
 {
     emulator_network_access_command command;
     bool    valid_command = false;
@@ -162,13 +185,13 @@ static void execute_command(generic_poll_server_client* client, char *cmd_str, c
     {
         send_error(client->socket_fd, "Unvalid command");
         return ;
-
     }
+    client->current_command = command;
     for (unsigned int i = 0; i < generic_emu_mwa_map_size; i++)
     {
         if ( generic_emu_mwa_map[i].command == command)
         {
-            bool success = generic_emu_mwa_map[i].function(client->socket_fd, args);
+            bool success = generic_emu_mwa_map[i].function(client->socket_fd, args, args_count);
             if (!success)
             {
                 send_error(client->socket_fd, "The command did not success");
@@ -183,7 +206,9 @@ static void process_command(generic_poll_server_client* client)
 	{
 		if (client->current_command == CORE_WRITE)
 		{
-            generic_poll_server_write_function(client->socket_fd, client->write_buffer, client->write_buffer_size);
+            bool result = generic_poll_server_write_function(client->socket_fd, client->pending_data, client->pending_size);
+            if (result)
+                client->in_cmd = false;
 			// do stuff to core write
 		}
 		return;
@@ -240,10 +265,27 @@ static void process_command(generic_poll_server_client* client)
 		args[arg_idx][arg_i] = 0;
 	}
 	s_debug("Executing command : %s - %d args\n", cmd, nb_arg);
-	execute_command(client, cmd, args);
+	execute_command(client, cmd, args, nb_arg);
     client->in_cmd = false;
     if (client->current_command == CORE_WRITE)
+	{
+        s_debug("Core write command\n");
+        client->write_handled_size = 0;
+        // No size provided, fuuuu, thanks Sliver !
+		if (nb_arg <= 2)
+        {
+            client->write_expected_size = 0;
+            
+        } else {
+            unsigned int total_size = 0;
+            for (unsigned int i = 2; i < nb_arg; i += 2)
+            {
+		        total_size += atoi(args[i]);
+			}
+            client->write_expected_size = total_size + 4;
+        }
         client->in_cmd = true;
+	}
     for (unsigned int i = 0; i < nb_arg; i++)
     {
         free(args[i]);
@@ -256,31 +298,71 @@ static void	preprocess_data(generic_poll_server_client* client)
 {
 	unsigned int read_pos = 0;
 	printf("Pre:Read size : %d\n", client->readed_size);
+    s_debug("Data : %s\n", hexString(client->readed_data, client->readed_size));
 	while (read_pos == 0 || read_pos < client->readed_size)
 	{
+        s_debug("Client in command : %d\n", client->in_cmd);
 		if (client->in_cmd)
 		{
-			s_debug("Pre:WRITE");
+			s_debug("Pre:WRITE\n");
+            s_debug("Data : %s\n", hexString(client->readed_data, client->readed_size));
 			unsigned int to_complete_size = 0;
 			if (client->current_command == CORE_WRITE)
-				to_complete_size = client->write_expected_size - client->write_buffer_size;
-			// Read data contains etheir all data or partial.
-			if (to_complete_size <= client->readed_size - read_pos)
-			{
-				printf("get all write data\n");
-				memcpy(client->pending_data, client->readed_data + read_pos, to_complete_size);
-				client->pending_size = to_complete_size;
-				read_pos += to_complete_size;
-			}
-			else {
-				printf("Partial write data\n");
-				memcpy(client->pending_data, client->readed_data + read_pos, client->readed_size - read_pos);
-				client->pending_size = client->readed_size - read_pos;
-				read_pos = client->readed_size;
-			}
-			process_command(client);
-			client->pending_pos = 0;
-			client->pending_size = 0;
+            {
+                if (client->write_handled_size < 4)
+                {
+                    if (client->write_handled_size == 0 && *(client->readed_data + read_pos) != 0)
+                    {
+                        send_error(client->socket_fd, "Expected binary data");
+                        //FIXME reinit state and close the connection?
+                    }
+                    unsigned int to_copy_s = min(5 - client->write_handled_size, client->readed_size - read_pos);
+                    if (client->write_handled_size == 0) // we don't want the byte that tell us it's binary.
+                    {
+                        to_copy_s -= 1;
+                        read_pos++;
+                    }
+                    memcpy(client->pending_data + client->write_handled_size, client->readed_data + read_pos, to_copy_s);
+                    client->pending_size += to_copy_s;
+                    client->write_handled_size += to_copy_s;
+                    read_pos += to_copy_s;
+                    client->pending_pos += to_copy_s;
+                }
+                
+                if (client->write_expected_size == 0)
+                {
+                    if (client->write_handled_size == 4)
+                    {
+                        s_debug("Data : %s\n", hexString(client->pending_data, 4));
+                        client->write_expected_size = ntohl(*((uint32_t*)(client->pending_data)));
+                        s_debug("Expected size from binary header %d\n", client->write_expected_size);
+                    }
+                }
+				to_complete_size = client->write_expected_size - client->write_handled_size + 4;
+                s_debug("Expected size : %d - to complete :%d\n", client->write_expected_size, to_complete_size);
+            }
+            if (client->write_handled_size >= 4)
+            {
+			    // Read data contains etheir all data or partial.
+    			if (to_complete_size <= client->readed_size - read_pos)
+	    		{
+				    printf("get all write data\n");
+				    memcpy(client->pending_data + client->pending_pos, client->readed_data + read_pos, to_complete_size);
+				    client->pending_size += to_complete_size;
+                    client->write_handled_size += to_complete_size;
+			    	read_pos += to_complete_size;
+		    	}
+	    		else {
+    				printf("Partial write data\n");
+			    	memcpy(client->pending_data + client->pending_pos, client->readed_data + read_pos, client->readed_size - read_pos);
+		    		client->pending_size += client->readed_size - read_pos;
+                    client->write_handled_size += client->readed_size - read_pos;
+    				read_pos = client->readed_size;
+			    }
+			    process_command(client);
+			    client->pending_pos = 0;
+			    client->pending_size = 0;
+            }
 			continue;
 		}
 		s_debug("Pre:Checking \\n\n");
@@ -321,16 +403,13 @@ static bool read_client_data(SOCKET fd)
 
 	int read_size;
 	generic_poll_server_client* client = get_client(fd);
-	while (true)
-	{
-		read_size = read(fd, &buff, 2048);
-		s_debug("Readed %d data on %d\n", read_size, fd);
-		if (read_size <= 0)
-			return false;
-		client->readed_size = read_size;
-		memcpy(client->readed_data, &buff, read_size);
-		preprocess_data(client);
-	};
+	read_size = read(fd, &buff, 2048);
+	s_debug("Readed %d data on %d\n", read_size, fd);
+	if (read_size <= 0)
+		return false;
+	client->readed_size = read_size;
+	memcpy(client->readed_data, &buff, read_size);
+	preprocess_data(client);
 	return true;
 }
 
@@ -392,6 +471,7 @@ static bool generic_poll_server_start()
 	poll_fds[0].events = POLLIN;
 	while (true)
 	{
+		s_debug("Waiting for poll\n");
 		int ret = poll(poll_fds, poll_fds_count, -1);
 		s_debug("%lld - Poll returned : %d\n", milliseconds_now() - now, ret);
 		// New clients ?
@@ -409,6 +489,8 @@ static bool generic_poll_server_start()
 			}
 			if (add_to_clients(new_socket))
 			{
+				int piko = 1;
+				ioctlsocket(new_socket, FIONBIO, &piko);
 				s_debug("Server: connection from host %s, port %hd.\n",
 					inet_ntoa(new_client.sin_addr),
 					ntohs(new_client.sin_port));
@@ -438,6 +520,19 @@ static bool generic_poll_server_start()
                     }
                     poll_fds_count--;
                 }
+			}
+			// This is when the socket is not closed nicely
+			if (poll_fds[i].revents & POLLERR)
+			{
+				s_debug("Disconnecting client\n");
+				remove_client(poll_fds[i].fd);
+				if (poll_fds[i].fd != poll_fds[poll_fds_count - 1].fd)
+				{
+					// We are not removing the last one
+					poll_fds[i] = poll_fds[poll_fds_count - 1];
+					i--;
+				}
+				poll_fds_count--;
 			}
 		}
 	}

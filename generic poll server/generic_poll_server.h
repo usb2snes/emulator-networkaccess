@@ -7,7 +7,7 @@
 typedef struct
 {
 	emulator_network_access_command command;
-	bool(*function)(SOCKET, char**);
+	bool(*function)(SOCKET, char**, int);
 } generic_emu_nwa_command_entry;
 
 typedef generic_emu_nwa_command_entry generic_emu_nwa_commands_map_t[];
@@ -30,9 +30,10 @@ typedef struct {
 
 	emulator_network_access_command			current_command;
 
-	char*               write_buffer;
-	unsigned int        write_buffer_size;
-	unsigned int		write_expected_size;
+    char                write_binary_header[5];
+    char                write_binary_header_size;
+	unsigned int        write_expected_size;
+	unsigned int		write_handled_size;
 
 
 } generic_poll_server_client;
