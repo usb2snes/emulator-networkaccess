@@ -78,7 +78,7 @@ bool    snes9x_152_savestate_get_ram_wram(const char* savestate)
     unsigned int    size = 0;
 
     section_name[3] = 0;
-    printf("Opening savestate");
+    printf("Opening savestate\n");
     FILE* fd = fopen(savestate, "rb");
     if (fd == NULL)
     {
@@ -86,10 +86,11 @@ bool    snes9x_152_savestate_get_ram_wram(const char* savestate)
         exit(1);
     }
     fseek(fd, 14, SEEK_SET);
-    while (fscanf(fd, "%3c:%06d:", &section_name, &size) == 2)
+    while (fscanf(fd, "%3c:%06d:", section_name, &size) == 2)
     {
         if (strcmp(section_name, "RAM") == 0)
         {
+            printf("loading WRAM (%s): %u bytes\n", section_name, size);
             wram_memory = (char*) malloc(size);
             char* buf = (char*) malloc(size);
             fread(buf, 1, size, fd);
@@ -98,6 +99,7 @@ bool    snes9x_152_savestate_get_ram_wram(const char* savestate)
         }
         if (strcmp(section_name, "SRA") == 0)
         {
+            printf("loading SRAM (%s): %u bytes\n", section_name, size);
             sram_memory = (char*) malloc(size);
             char* buf = (char*) malloc(size);
             fread(buf, 1, size, fd);
