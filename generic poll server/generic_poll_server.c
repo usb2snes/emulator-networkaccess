@@ -22,6 +22,7 @@
 #define write(a,b,c) send(a, b, c, 0)
 #define poll(a, b, c) WSAPoll(a, b, c);
 typedef LPWSAPOLLFD poll_fd_t;
+#define socklen_t int
 #else
 #include <poll.h>
 	typedef int SOCKET;
@@ -491,7 +492,7 @@ static bool generic_poll_server_start()
 		{
 			printf("New client connection\n");
 			SOCKET new_socket;
-			int size = sizeof(struct sockaddr_in);
+			socklen_t size = sizeof(struct sockaddr_in);
 			struct sockaddr_in new_client;
 			new_socket = accept(server_socket, (struct sockaddr *) &new_client, &size);
 			if (new_socket < 0)

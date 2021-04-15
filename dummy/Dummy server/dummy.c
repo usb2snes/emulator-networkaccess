@@ -268,7 +268,7 @@ bool dummy_core_memory_read(SOCKET socket, char ** args, int ac)
     char* ptr = NULL;
     size_t offset = generic_poll_server_get_offset(args[1]);
     uint32_t size = atoi(args[2]);
-    s_debug("Trying to read : %s - %06X:%d\n", args[0], offset, size);
+    s_debug("Trying to read : %s - %06lX:%d\n", args[0], (unsigned long)offset, size);
     if (strcmp(args[0], "WRAM") == 0)
         ptr = wram_memory;
     if (strcmp(args[0], "SRAM") == 0)
