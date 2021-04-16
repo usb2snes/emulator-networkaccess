@@ -143,22 +143,14 @@ int	main(int argc, char *argv[]) {
 		return false;
 	}
 #endif
-
     if (argc != 3)
     {
-#if !defined DEFAULT_ROM || !defined DEFAULT_STATE
         fprintf(stderr, "Usage: dummyserver <romfile> <savestate>\n");
         exit(1);
-#else
-        rom_path = DEFAULT_ROM;
-        state_path = DEFAULT_STATE;
-#endif
     }
-    else
-    {
-        rom_path = argv[1];
-        state_path = argv[2];
-    }
+    rom_path = argv[1];
+    state_path = argv[2];
+
     prep_memory(rom_path, state_path);
     printf("Starting Dummy Server: %s %s\n",
         rom_path, state_path);
@@ -279,7 +271,7 @@ bool dummy_core_memory_read(SOCKET socket, char ** args, int ac)
         ptr = rom_memory;
     write(socket, "\0", 1);
 	uint32_t network_size = htonl(size);
-    write(socket, &network_size, 4);
+    write(socket, (const char*) &network_size, 4);
     s_debug("Sending : %s\n", hexString(ptr + offset, size));
     write(socket, ptr + offset, size);
 	return true;
@@ -294,17 +286,23 @@ uint32_t size_to_write = 0;
 
 bool    write_to_memory(SOCKET socket, char* data, uint32_t size)
 {
-	if (size_written == 0)
+    static bool size_header_get = false;
+    s_debug("write_to_memory : %d, %s\n", size, hexString(data, size));
+	if (size_header_get == false)
 	{
-		if (size >= 4)
-		{
-			size_to_write = ntohl(*((uint32_t*) data));
-			data += 4;
-			size -= 4;
-		}
+        uint32_t header_size = ntohl(*((uint32_t*) data));
+        if (size_to_write != 0 && header_size != size_to_write)
+        {
+            // this is an error
+        }
+        size_to_write = header_size;
+        s_debug("wtm: ntohl: %d\n", size_to_write);
+		data += 4;
+		size -= 4;
+        size_header_get = true;
 	}
     if (size == 0)
-        return true; // FIXME: or false?
+        return false;
     memcpy(memory_to_write + offset_to_write, data, size);
     size_written += size;
     s_debug("Writing to memory : %d - %d/%d\n", size, size_written, size_to_write);
@@ -315,6 +313,7 @@ bool    write_to_memory(SOCKET socket, char* data, uint32_t size)
         size_written = 0;
         offset_to_write = 0;
         memory_to_write = NULL;
+        size_header_get = false;
         write(socket, "\n\n", 2);
         return true;
     }

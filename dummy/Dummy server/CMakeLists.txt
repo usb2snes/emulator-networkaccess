@@ -9,8 +9,6 @@ set(CMAKE_BUILD_TYPE Debug)
 add_executable (dummyserver dummy.c)
 
 set_property(TARGET dummyserver PROPERTY C_STANDARD 99)
-add_compile_definitions("DEFAULT_ROM=\"usb2snes-testlorom.sfc\"")
-add_compile_definitions("DEFAULT_STATE=\"usb2snes-testlorom\"")
 
 
 if(WIN32)

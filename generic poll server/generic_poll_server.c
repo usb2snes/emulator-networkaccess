@@ -410,16 +410,16 @@ static bool read_client_data(SOCKET fd)
 
 	int read_size;
 	generic_poll_server_client* client = get_client(fd);
-	read_size = read(fd, &buff, 2048);
+	read_size = read(fd, buff, 2048);
 	s_debug("Readed %d data on %d\n", read_size, fd);
 	if (read_size <= 0)
 		return false;
 	client->readed_size = read_size;
-	memcpy(client->readed_data, &buff, read_size);
+	memcpy(client->readed_data, buff, read_size);
 	preprocess_data(client);
 	return true;
 }
-
+/*
 long long milliseconds_now() {
 #if defined WIN32 || defined _WIN32
     static LARGE_INTEGER s_frequency;
@@ -438,7 +438,7 @@ long long milliseconds_now() {
     return (long long)(ts.tv_nsec / 1000000) + ((long long)ts.tv_sec * 1000ll);
 #endif
 }
-
+*/
 
 static bool generic_poll_server_start()
 {
@@ -476,8 +476,8 @@ static bool generic_poll_server_start()
 		return false;
 	}
 	printf("Dummy server ready; listening on %d\n", EMULATOR_NETWORK_ACCESS_STARTING_PORT + cpt);
-	long long now = milliseconds_now();
-	s_debug("Time : %lld\n", milliseconds_now());
+	//long long now = milliseconds_now();
+	//s_debug("Time : %lld\n", milliseconds_now());
 	struct pollfd	poll_fds[6];
 	unsigned int	poll_fds_count = 1;
 	poll_fds[0].fd = server_socket;
@@ -486,7 +486,7 @@ static bool generic_poll_server_start()
 	{
 		s_debug("Waiting for poll\n");
 		int ret = poll(poll_fds, poll_fds_count, -1);
-		s_debug("%lld - Poll returned : %d\n", milliseconds_now() - now, ret);
+		//s_debug("%lld - Poll returned : %d\n", milliseconds_now() - now, ret);
 		// New clients ?
 		if (poll_fds[0].revents & POLLIN)
 		{
@@ -505,7 +505,7 @@ static bool generic_poll_server_start()
 				int piko = 1;
 				ioctlsocket(new_socket, FIONBIO, &piko);
 				s_debug("Server: connection from host %s, port %hd.\n",
-					inet_ntoa(new_client.sin_addr),
+					inet_ntoa(new_client.sin_addr), // FIXME, depecrated
 					ntohs(new_client.sin_port));
 				poll_fds[poll_fds_count].fd = new_socket;
 				poll_fds[poll_fds_count].events = POLLIN;
@@ -535,6 +535,7 @@ static bool generic_poll_server_start()
                 }
 			}
 			// This is when the socket is not closed nicely
+            // Check if POLLIN and POLLERR can happen at the same time
 			if (poll_fds[i].revents & POLLERR)
 			{
 				s_debug("Disconnecting client\n");
