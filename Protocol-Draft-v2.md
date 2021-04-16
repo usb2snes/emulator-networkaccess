@@ -211,7 +211,7 @@ access:rw
 
 ### CORE_READ `<memory_name>` [`<offset>` [`<size>` [`<offset2>` `<size2>` ....]]]
 
-Read a part of the memory. Emu will send binary reply.
+Read one or more ranges from a memory. Emu will send binary reply.
 
 Offsets/addresses that start with $ are hexadecimal, otherwise they are decimal.
 
@@ -222,11 +222,11 @@ Offsets/addresses that start with $ are hexadecimal, otherwise they are decimal.
 * If **all** addresses are out of bounds the reply can be empty instead of sending padding.
 * If offsetN is given, sizeN can not be omitted for N>=2
 
-**NOTE:** `READ_CORE_MEMORY` was renamed to `CORE_READ`
+Sample: `CORE_READ WRAM;$100;10;512;$a` reads 10 bytes from 0x100 and 10 bytes from 0x200 of WRAM. Reply will be 20 bytes long.
 
 ### CORE_WRITE `<memory name>` [`<offset>` [`<size>` [`<offset2>` `<size2>` ....]]]
 
-Write a part of the memory. Followed by binary data.
+Write one or more ranges to a memory. Followed by binary data.
 
 Offsets/addresses that start with $ are hexadecimal, otherwise they are decimal.
 
@@ -236,7 +236,7 @@ Offsets/addresses that start with $ are hexadecimal, otherwise they are decimal.
 * If size is longer than binary data, ignore missing bytes from binary data or reply error
 * If offsetN is given, sizeN can not be omitted for N>=2
 
-**NOTE:** `WRITE_CORE_MEMORY` was renamed to `CORE_WRITE`
+Sample: `CORE_WRITE WRAM;$100;10;512;$a` `<20 byte binary block>` writes 10 bytes to 0x100 and 10 bytes to 0x200 of WRAM.
 
 ### DEBUG_BREAK
 
