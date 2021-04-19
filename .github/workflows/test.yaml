@@ -44,4 +44,4 @@ jobs:
       run: |
         cd "dummy/Dummy Emulator"
         cmake CMakeLists.txt
-        nmake
+        cmake --build .
