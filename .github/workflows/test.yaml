@@ -31,6 +31,11 @@ jobs:
         cd "dummy/Dummy Emulator"
         cmake -DCMAKE_C_FLAGS_DEBUG="-Wall -Werror" CMakeLists.txt
         cmake --build .
+    - name: Store binary
+      uses: actions/upload-artifact@v2
+      with:
+        name: ubuntu-dummyemulator
+        path: "dummy/Dummy Emulator/dummyemulator"
 
   test-windows:
 
@@ -45,3 +50,9 @@ jobs:
         cd "dummy/Dummy Emulator"
         cmake CMakeLists.txt
         cmake --build .
+        dir
+    - name: Store binary
+      uses: actions/upload-artifact@v2
+      with:
+        name: win64-dummyemulator
+        path: "dummy/Dummy Emulator/Debug/dummyemulator.exe"
