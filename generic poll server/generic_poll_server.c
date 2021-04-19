@@ -70,7 +70,7 @@ static void print_socket_error(const char* msg)
     fprintf(stderr, "%s - WSA error : %d -- %S\n", msg, WSAGetLastError(), s);
     LocalFree(s);
 #else
-    fprintf(stderr, "%s : %s\n", msg, strerrno(errno);
+    fprintf(stderr, "%s : %s\n", msg, strerror(errno));
 #endif
 }
 
@@ -205,7 +205,7 @@ static void execute_command(generic_poll_server_client* client, char *cmd_str, c
     }
     if (!valid_command)
     {
-        send_error(client->socket_fd, "Unvalid command");
+        send_error(client->socket_fd, "Invalid command");
         return ;
     }
     client->current_command = command;
@@ -216,7 +216,7 @@ static void execute_command(generic_poll_server_client* client, char *cmd_str, c
             bool success = generic_emu_mwa_map[i].function(client->socket_fd, args, args_count);
             if (!success)
             {
-                send_error(client->socket_fd, "The command did not success");
+                send_error(client->socket_fd, "The command did not succeed");
             }
         }
     }
@@ -466,7 +466,7 @@ static bool generic_poll_server_start()
     if (server_socket < 0)
     {
         print_socket_error("Error creating the server socket");
-        return 1;
+        return false;
     }
     name.sin_family = AF_INET;
     name.sin_port = htons(EMULATOR_NETWORK_ACCESS_STARTING_PORT);
@@ -502,6 +502,12 @@ static bool generic_poll_server_start()
         s_debug("Waiting for poll\n");
         int ret = poll(poll_fds, poll_fds_count, -1);
         //s_debug("%lld - Poll returned : %d\n", milliseconds_now() - now, ret);
+        if (ret<0)
+        {
+            fprintf(stderr, "Error polling: %s\n", strerror(errno));
+            if (errno == EINTR) break; // FIXME: or continue?
+            return false;
+        }
         // New clients ?
         if (poll_fds[0].revents & POLLIN)
         {
@@ -568,4 +574,5 @@ static bool generic_poll_server_start()
             }
         }
     }
+    return true;
 }

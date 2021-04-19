@@ -1,15 +1,15 @@
 # exclude test files
-dummy/Dummy server/usb2snes-testlorom.sfc
-dummy/Dummy server/usb2snes-testlorom
+dummy/Dummy Emulator/usb2snes-testlorom.sfc
+dummy/Dummy Emulator/usb2snes-testlorom
 
 # exclude build output
-dummy/Dummy server/dummyserver
+dummy/Dummy Emulator/dummyemulator
 
 # f cmake
 **/CMakeFiles
 **/CMakeCache.txt
 **/cmake_install.cmake
-dummy/Dummy server/Makefile
+dummy/Dummy Emulator/Makefile
 
 # exclude cache files
 *~
