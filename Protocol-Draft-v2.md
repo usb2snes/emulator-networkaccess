@@ -193,6 +193,7 @@ Give information about the currently loaded core. See CORE_INFO.
 Load the specified core.
 
 If `<core_name>` is empty, unload core.
+
 ### CORE_RESET
 
 CORE_RESET resets the core to its initial state.
@@ -201,12 +202,18 @@ CORE_RESET resets the core to its initial state.
 
 Get information about the available memory of the loaded core.
 
+`name` is defined per platform, see [platforms/](platform documentation).\
+`access` is one of `rw`,`r`,`w` for read/write, read-only, write-only.\
+`size` is optional.
+
 Example:
 ```
 name:WRAM
 access:rw
+size:131072
 name:SRAM
 access:rw
+size:2048
 ```
 
 ### CORE_READ `<memory_name>` [`<offset>` [`<size>` [`<offset2>` `<size2>` ....]]]
