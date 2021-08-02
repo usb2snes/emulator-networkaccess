@@ -18,6 +18,19 @@ typedef generic_emu_nwa_command_entry generic_emu_nwa_commands_map_t[];
 typedef int SOCKET;
 #endif
 
+typedef enum
+{
+    NEW_CLIENT,
+    REMOVED_CLIENT,
+    SERVER_STARTED
+}  generic_poll_server_callback;
+
+typedef struct {
+    bool(*add_client)(SOCKET socket);
+    bool(*remove_client)(SOCKET socket);
+    bool(*server_started)(int port);
+} generic_poll_server_callbacks;
+
 typedef struct {
     SOCKET  socket_fd;
     char    readed_data[2048];
@@ -28,7 +41,7 @@ typedef struct {
 
     bool    in_cmd;
 
-    emulator_network_access_command			current_command;
+    emulator_network_access_command         current_command;
 
     char                write_binary_header[5];
     char                write_binary_header_size;
@@ -38,18 +51,12 @@ typedef struct {
 
 } generic_poll_server_client;
 
-/*
-You need to define these 3 functions
 
-bool (*generic_poll_server_write_function)(SOCKET, char*, uint32_t) = NULL;
-bool (*generic_poll_server_add_client_callback)(SOCKET socket) = NULL;
-bool (*generic_poll_server_remove_client_callback)(SOCKET socket) = NULL;
 
-*/
-
+void            generic_poll_server_add_callback(generic_poll_server_callback cb, void* fntptr);
 
 /*
-    use it like that : 
+    use it like that :
     send_hash_reply(socket, "key", "value", "key2", "value2")
 */
 

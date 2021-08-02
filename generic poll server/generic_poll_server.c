@@ -137,7 +137,30 @@ size_t          generic_poll_server_get_offset(const char *offset_str)
 }
 
 static generic_poll_server_client clients[5];
+static generic_poll_server_callbacks callbacks = {NULL, NULL, NULL};
 
+
+void generic_poll_server_add_callback(generic_poll_server_callback cb, void* fntptr)
+{
+    switch (cb)
+    {
+        case SERVER_STARTED:
+        {
+            callbacks.server_started = (bool(*)(int))fntptr;
+            break;
+        }
+        case NEW_CLIENT:
+        {
+            callbacks.add_client = (bool(*)(SOCKET))fntptr;
+            break;
+        }
+        case REMOVED_CLIENT:
+        {
+            callbacks.remove_client = (bool(*)(SOCKET))fntptr;
+            break;
+        }
+    }
+}
 
 static generic_poll_server_client* get_client(SOCKET client_fd)
 {
@@ -156,6 +179,8 @@ static void remove_client(SOCKET client_fd)
         if (clients[i].socket_fd == client_fd)
         {
             clients[i].socket_fd = 0;
+            if (callbacks.remove_client != NULL)
+                callbacks.remove_client(client_fd);
             return;
         }
     }
@@ -490,11 +515,12 @@ static bool generic_poll_server_start()
         print_socket_error("Can't listen");
         return false;
     }
-    printf("Dummy server ready; listening on %d\n", EMULATOR_NETWORK_ACCESS_STARTING_PORT + cpt);
+    if (callbacks.server_started != NULL)
+        callbacks.server_started(EMULATOR_NETWORK_ACCESS_STARTING_PORT + cpt);
     //long long now = milliseconds_now();
     //s_debug("Time : %lld\n", milliseconds_now());
-    struct pollfd	poll_fds[6];
-    unsigned int	poll_fds_count = 1;
+    struct pollfd   poll_fds[6];
+    unsigned int    poll_fds_count = 1;
     poll_fds[0].fd = server_socket;
     poll_fds[0].events = POLLIN;
     while (true)
@@ -532,8 +558,8 @@ static bool generic_poll_server_start()
                 poll_fds[poll_fds_count].events = POLLIN;
                 poll_fds[poll_fds_count].revents = 0;
                 poll_fds_count++;
-                if (generic_poll_server_add_client_callback != NULL)
-                    generic_poll_server_add_client_callback(new_socket);
+                if (callbacks.add_client != NULL)
+                    callbacks.add_client(new_socket);
             } else {
                 fprintf(stderr, "execing max client number : %d\n", 5);
                 close(new_socket);

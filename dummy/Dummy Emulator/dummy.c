@@ -136,6 +136,11 @@ void    prep_memory(const char* romfile, const char* savestate)
 const char* rom_path;
 const char* state_path;
 
+void    server_started(int port)
+{
+    printf("Dummy server ready; listening on %d\n", port);
+}
+
 int	main(int argc, char *argv[]) {
 #ifdef _WIN32
     WSADATA wsadata;
@@ -156,7 +161,9 @@ int	main(int argc, char *argv[]) {
     prep_memory(rom_path, state_path);
     printf("Starting Dummy Server: %s %s\n",
         rom_path, state_path);
-    generic_poll_server_start();
+    generic_poll_server_add_callback(SERVER_STARTED, server_started);
+    bool ret = generic_poll_server_start();
+    printf("Return : %d\n", ret);
 }
 
 static void write_to_socket(SOCKET socket, const char* str)
