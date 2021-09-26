@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <clipPath id="a" clipPathUnits="userSpaceOnUse">
+      <path fill="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width=".5673" d="M11.3402 4.537H29.196v17.8558H11.3402z" paint-order="stroke markers fill"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#a)" transform="translate(-30.4847 -12.1964) scale(2.6882)">
+    <path fill="#a1a1a1" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".2646" d="m26.573 15.421.0552 3.377.4667.3426-.0465-3.7197z"/>
+    <path fill="#cfcfcf" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".265" d="m27.0478 15.4142.047 3.7264.3752-.167-.006-3.5594z"/>
+    <path fill="#3a3a3a" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".265" d="m.1325 4.2785 21.4723 11.778 2.4604-1.7983s-.4442-.8043.3004-1.3109c.8139-.5536 1.7839.0206 1.7839.0206l2.1222-1.4463L6.7462.1325Z"/>
+    <path fill="#121212" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".265" d="m.1325 4.2785.0936 4.1763 21.4325 11.9099-.0539-4.3082L.1325 4.2785"/>
+    <path fill="#767676" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".265" d="m21.6048 16.0565.054 4.3082 6.6193-4.6778-.006-4.1653z"/>
+    <path fill="#a1a1a1" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".2646" d="m2.1625 8.0582-.622.7308.115 3.0013.4087.3865.0675 4.1422.4668.3427-.0544-4.3228.447-.1254.104-2.3992.68-.7715z"/>
+    <path fill="#cfcfcf" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".265" d="m2.5985 16.6617.3748-.1667-.006-3.8294.4115-.1562.0683-2.411.3283-1.0556-.6801.7715-.1039 2.3992-.447.1254.0544 4.3228"/>
+    <path fill="#a1a1a1" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".2646" d="m5.1131 9.7435-.622.7308.115 3.0013.4087.3865.0675 4.1422.4668.3427-.0544-4.3228.447-.1253.104-2.3993.68-.7715z"/>
+    <path fill="#cfcfcf" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".265" d="m5.5491 18.347.3749-.1667-.006-3.8293.4114-.1563.0683-2.411.3283-1.0556-.68.7715-.104 2.3993-.447.1253.0544 4.3228"/>
+    <path fill="#a1a1a1" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".2646" d="m8.3108 11.5682-.622.7308.115 3.0013.4087.3865.0675 4.1422.4668.3427-.0544-4.3228.447-.1254.104-2.3992.68-.7715z"/>
+    <path fill="#cfcfcf" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".265" d="m8.7468 20.1717.3749-.1667-.006-3.8294.4114-.1562.0683-2.411.3283-1.0556-.68.7715-.104 2.3992-.447.1254.0544 4.3228"/>
+    <path fill="#a1a1a1" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".2646" d="m11.3326 13.3016-.622.7308.115 3.0013.4087.3865.0675 4.1422.4668.3427-.0544-4.3228.447-.1254.104-2.3993.68-.7714z"/>
+    <path fill="#cfcfcf" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".265" d="m11.7686 21.905.3748-.1666-.006-3.8294.4115-.1563.0683-2.4109.3283-1.0556-.6801.7714-.1039 2.3993-.447.1254.0544 4.3228"/>
+    <path fill="#a1a1a1" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".2646" d="m14.5086 15.0365-.622.7308.115 3.0013.4086.3865.0675 4.1422.4668.3427-.0544-4.3228.4471-.1253.1039-2.3993.68-.7715z"/>
+    <path fill="#cfcfcf" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".265" d="m14.9445 23.64.3749-.1667-.006-3.8293.4115-.1563.0683-2.411.3282-1.0556-.68.7715-.104 2.3993-.447.1253.0544 4.3228"/>
+    <path fill="#a1a1a1" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".2646" d="m17.7145 17.1466-.622.7308.115 3.0013.4087.3865.0675 4.1422.4668.3427-.0544-4.3228.447-.1254.104-2.3992.68-.7715z"/>
+    <path fill="#cfcfcf" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".265" d="m18.1505 25.75.3749-.1666-.006-3.8294.4114-.1562.0683-2.411.3283-1.0556-.68.7715-.104 2.3992-.447.1254.0544 4.3228"/>
+    <path fill="#ffdb58" fill-rule="evenodd" d="m22.7735 17.4869.0152 1.9306.402-.3075-.0103-1.9059zm.6462-.4589.0152 1.9306.402-.3074-.0103-1.906zm.6789-.4682.0152 1.9305.402-.3074-.0103-1.906zm.6511-.4611.0152 1.9305.402-.3074-.0103-1.906zm.6399-.452.0152 1.9306.402-.3074-.0103-1.906zm.6216-.4384.0152 1.9306.402-.3074-.0104-1.906zm.6088-.4477.0152 1.9305.402-.3074-.0103-1.906zm.615-.4159.0153 1.9306.402-.3074-.0104-1.906z"/>
+    <path fill="#757575" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".247" d="m23.2613 15.0025 2.8882-2.0346-.004-1.699-2.965 1.9102z"/>
+    <path fill="#b9b9b9" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".247" d="m13.7535 3.6031 5.6707 5.3066-.7124.4253 2.7153 2.903 1.7531.9411 2.9653-1.9102-2.1688-.918-2.382-2.811-.852.5721-5.536-5.212z"/>
+    <path fill="#4e4e4e" fill-rule="evenodd" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".247" d="m13.7535 3.6031-.0103 1.2989 4.3927 4.1446.0618 1.2086 3.3312 3.4463.0755.4277 1.657.8733-.0812-1.8234-1.7532-.9412-2.7152-2.903.7124-.4252z"/>
+    <ellipse cx="21.3288" cy="14.9016" fill="#fff" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6881" paint-order="stroke markers fill" rx="2.2605" ry="2.355"/>
+    <ellipse cx="26.8846" cy="11.453" fill="#fff" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width=".6166" paint-order="stroke markers fill" rx="2.0032" ry="2.1336"/>
+    <ellipse cx="21.8923" cy="15.4306" paint-order="stroke markers fill" rx="1.3808" ry="1.7808"/>
+    <ellipse cx="27.0876" cy="11.9508" paint-order="stroke markers fill" rx="1.2236" ry="1.6134"/>
+  </g>
+</svg>
