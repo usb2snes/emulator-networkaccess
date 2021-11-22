@@ -22,13 +22,15 @@ typedef enum
 {
     NEW_CLIENT,
     REMOVED_CLIENT,
-    SERVER_STARTED
+    SERVER_STARTED,
+    AFTER_POLL
 }  generic_poll_server_callback;
 
 typedef struct {
     bool(*add_client)(SOCKET socket);
     bool(*remove_client)(SOCKET socket);
     bool(*server_started)(int port);
+    bool(*after_poll)();
 } generic_poll_server_callbacks;
 
 typedef struct {

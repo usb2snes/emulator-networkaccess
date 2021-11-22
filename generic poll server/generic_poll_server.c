@@ -137,7 +137,7 @@ size_t          generic_poll_server_get_offset(const char *offset_str)
 }
 
 static generic_poll_server_client clients[5];
-static generic_poll_server_callbacks callbacks = {NULL, NULL, NULL};
+static generic_poll_server_callbacks callbacks = {NULL, NULL, NULL, NULL};
 
 
 void generic_poll_server_add_callback(generic_poll_server_callback cb, void* fntptr)
@@ -159,6 +159,11 @@ void generic_poll_server_add_callback(generic_poll_server_callback cb, void* fnt
             callbacks.remove_client = (bool(*)(SOCKET))fntptr;
             break;
         }
+        case AFTER_POLL:
+        {
+            callbacks.after_poll = (bool(*)())fntptr;
+            break;
+        }
     }
 }
 
@@ -178,6 +183,7 @@ static void remove_client(SOCKET client_fd)
     {
         if (clients[i].socket_fd == client_fd)
         {
+            s_debug("Removing client %d\n", client_fd);
             clients[i].socket_fd = 0;
             if (callbacks.remove_client != NULL)
                 callbacks.remove_client(client_fd);
@@ -267,7 +273,7 @@ static void process_command(generic_poll_server_client* client)
     args[0] = NULL;
     char* cmd_block = client->pending_data;
     client->in_cmd = true;
-    s_debug("Command block is : %s\n", cmd_block);
+    s_debug("Command block is : %d - %s\n", client->pending_size, cmd_block);
 
     for (unsigned int i = 0; i < client->pending_size; i++)
     {
@@ -393,14 +399,14 @@ static void	preprocess_data(generic_poll_server_client* client)
                 // Read data contains etheir all data or partial.
                 if (to_complete_size <= client->readed_size - read_pos)
                 {
-                    printf("get all write data\n");
+                    s_debug("get all write data\n");
                     memcpy(client->pending_data + client->pending_pos, client->readed_data + read_pos, to_complete_size);
                     client->pending_size += to_complete_size;
                     client->write_handled_size += to_complete_size;
                     read_pos += to_complete_size;
                 }
                 else {
-                    printf("Partial write data\n");
+                    s_debug("Partial write data\n");
                     memcpy(client->pending_data + client->pending_pos, client->readed_data + read_pos, client->readed_size - read_pos);
                     client->pending_size += client->readed_size - read_pos;
                     client->write_handled_size += client->readed_size - read_pos;
@@ -435,7 +441,7 @@ static void	preprocess_data(generic_poll_server_client* client)
         memcpy(client->pending_data + client->pending_pos, client->readed_data + read_pos, client->readed_size - read_pos);
         client->pending_pos += client->readed_size - read_pos;
         client->pending_size += client->readed_size - read_pos;
-        printf("ppos, ppsize : %d, %d\n", client->pending_pos, client->pending_size);
+        s_debug("ppos, ppsize : %d, %d\n", client->pending_pos, client->pending_size);
         break;
     }
 }
@@ -479,6 +485,8 @@ long long milliseconds_now() {
 #endif
 }
 */
+
+static bool    generic_poll_server_stop = false;
 
 static bool generic_poll_server_start()
 {
@@ -525,8 +533,25 @@ static bool generic_poll_server_start()
     poll_fds[0].events = POLLIN;
     while (true)
     {
-        s_debug("Waiting for poll\n");
-        int ret = poll(poll_fds, poll_fds_count, -1);
+        //s_debug("Waiting for poll\n");
+        if (generic_poll_server_stop)
+        {
+            s_debug("Stopping the server\n");
+            for (unsigned int i = 0; i < 5; i++)
+            {
+                if (clients[i].socket_fd != 0)
+                {
+                    close(clients[i].socket_fd);
+                    clients[i].socket_fd = 0;
+                }
+            }
+            close(server_socket);
+            generic_poll_server_stop = false;
+            return true;
+        }
+        int ret = poll(poll_fds, poll_fds_count, 200);
+        if (callbacks.after_poll != NULL)
+            callbacks.after_poll();
         //s_debug("%lld - Poll returned : %d\n", milliseconds_now() - now, ret);
         if (ret<0)
         {
@@ -586,9 +611,9 @@ static bool generic_poll_server_start()
             }
             // This is when the socket is not closed nicely
             // Check if POLLIN and POLLERR can happen at the same time
-            if (poll_fds[i].revents & POLLERR)
+            if (poll_fds[i].revents & POLLERR || poll_fds[i].revents & POLLHUP)
             {
-                s_debug("Disconnecting client\n");
+                s_debug("Disconnecting client err(%X)/hup(%X) : %X\n", POLLERR, POLLHUP, poll_fds[i].revents);
                 remove_client(poll_fds[i].fd);
                 if (poll_fds[i].fd != poll_fds[poll_fds_count - 1].fd)
                 {
