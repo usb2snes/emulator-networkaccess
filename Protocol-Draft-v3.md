@@ -188,9 +188,9 @@ It may be used by the client to detect that the loaded game has changed.
 
 Change emulator state.
 
-EMU_STOP: console power off.\
-EMU_RESET: console soft reset.\
-EMU_RELOAD: reinserting the cartridge/CD if possible or STOP followed by RESUME otherwise.
+EMULATION_STOP: console power off.\
+EMULATION_RESET: console soft reset.\
+EMULATION_RELOAD: reinserting the cartridge/CD if possible or STOP followed by RESUME otherwise.
 
 ### LOAD_GAME `<path/to/game.rom>`
 
