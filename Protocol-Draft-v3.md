@@ -14,6 +14,28 @@ This is a draft. Feedback is welcome.
 * Control : Load game, start/stop/reset emulation.
 * Access Memory : Read and write core memories if possible.
 
+## Vocabulary and Context
+
+The protocol separate the notion of emulator and core. An emulator can be an simple single purpose emulator
+like Snes9x/Dolphin or frontend to multiple platform like RetroArch or Bizhawk.
+
+A core is often responsible for only the emulation part and a frontend like RetroArch provide the handling of
+audio/video and user input.
+
+For the protocol purpose, a regular emulator like Snes9x is an emulator with one core. Something like Bsnes/Higan with
+multiple profils for one core (accuracy/performance/balanced) provide a core for each profil. RetroArch obviously
+provide multiple core.
+
+Since emulation and core are often tied, the protocol tend to only offer CORE related commands when it's something
+specific to a core. To try to be more clear, getting the informations about a core is specific to the core, pausing
+the emulation is more general
+
+### Keywords
+
+Emulator : Refer to the software itself, IE : Snes9x
+Core : The piece of code that handle the plaform emulation eg: Bsnes-core
+Emulation : The emulation of a game
+
 
 ## TCP Port
 
@@ -124,11 +146,11 @@ A regular success is an empty list.
 
 For more details about each commands see after this part.
 
-The following commands must be implemented: `EMU_INFO`, `EMU_STATUS`, `CORES_LIST`, `CORE_INFO`, `CORE_CURRENT_INFO`
+The following commands must be implemented: `EMULATOR_INFO`, `EMULATION_STATUS`, `CORES_LIST`, `CORE_INFO`, `CORE_CURRENT_INFO`
 
 ## Commands
 
-### EMU_INFO
+### EMULATOR_INFO
 
 Gives information about the emulator
 
@@ -136,15 +158,17 @@ Gives information about the emulator
 name:<name>
 version:<version>
 id:<a id to identify the running instance of the emulator>
+commands:<string separated by commas of the implemented commands>
 user_defined...
 ```
 
-`name`, `version` and `id` are mandatory. The id is needed to identify the emulator since users can start multiples instances
-of the same emulator on the same system.
+`name`, `version`, `id` and `commands` are mandatory. The id is needed to identify the emulator since users can start multiples instances
+of the same emulator on the same system. The commands allow the client to know what is supported by the emulator.
 
-### EMU_STATUS
 
-Returns what state the emulator is in.
+### EMULATION_STATUS
+
+Returns the state of the emulation.
 
 ```
 state:<running|paused|stopped|no_game>
@@ -153,7 +177,7 @@ game:<game_id>
 `game_id` is mandatory when the state is running or paused. It can be a name, filename or hash. 
 It mostly for the client to detect that the loaded game has changed.
 
-### EMU_PAUSE, EMU_STOP, EMU_RESET, EMU_RESUME, EMU_RELOAD
+### EMULATION_PAUSE, EMULATION_STOP, EMULATION_RESET, EMULATION_RESUME, EMULATION_RELOAD
 
 Change emulator state.
 
