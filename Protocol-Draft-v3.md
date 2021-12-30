@@ -93,7 +93,7 @@ and to have a small memory footprint.
 
 ### ASCII reply
 
-An ascii reply is represented as a hash map, with keys and values, or as a list of hash maps (see last paragraph).
+An ascii reply is represented as a hash map, with keys and values
 
 ```
 \n
@@ -102,17 +102,26 @@ another_key:another value\n
 \n
 ```
 
+or as a list of hash maps (see last paragraph)
+```
+\n
+name:name1\n
+deatail:detail1\n
+name:name2\n
+detail:detail2\n
+\n
+```
+
 Key names are lower case and separated by _. Values are arbitrary strings and their meaning depends on the command.
 
 For predefined constants (like emulator state) values are in lower case.
 
-Keys can repeat, the data then represents a `list<map<string,string>>`:
-
-Whenever a duplicate key is received, a new map is started in the list, so to generate the list
-  * split reply by `\n`, iterate over key value pairs
+Whenever a duplicate key is received, and a list is expected, a new map is started in the list.\
+This means to correctly generate the list
+  * iterate over all key value pairs
   * check if `key` is already in `map`
     * no: add key value pair to map
-    * yes: yield the map and clear it
+    * yes: yield the map and start a new one
 
 ### Binary reply
 
