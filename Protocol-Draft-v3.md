@@ -280,7 +280,7 @@ Offsets/addresses that start with $ are hexadecimal, otherwise they are decimal.
 How to implement:
 * no offset: return entire memory
 * just offset: return from offset to end
-* otherwise, dyamic: concatenate all regions, the last region may be truncated if out of bounds, others may need padding
+* otherwise, dynamic: concatenate all regions, the last region may be truncated if out of bounds, others may need padding
 * otherwise, static: allocate a buffer of sum(sizes), clear with 0, copy regions into the buffer
 
 Processing the reply:
