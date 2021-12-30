@@ -39,7 +39,7 @@ Emulation: The process of executing the core and thus emulating the platform/gam
 
 ## TCP Port
 
-The protocol is build on top of TCP.
+The protocol is built on top of TCP.
 
 An emulator implementing this protocol must listen on port 65400, and if already in use increment by 1.
 
