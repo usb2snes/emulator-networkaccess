@@ -2,7 +2,7 @@
 
 The purpose of this protocol is to have a uniform way to communicate with emulators.
 
-See [README.md](README.md) for more general information. This file mostly describe
+See [README.md](README.md) for more general information. This file mostly describes
 the protocol itself.
 
 This is a draft. Feedback is welcome.
@@ -10,36 +10,36 @@ This is a draft. Feedback is welcome.
 
 ## Primary functions
 
-* Information : Allow to get emulator, core and game information.
-* Control : Load game, start/stop/reset emulation.
-* Access Memory : Read and write core memories if possible.
+* Information: Allow to get emulator, core and game information.
+* Control: Load game, start/stop/reset emulation.
+* Access Memory: Read and write core memories if possible.
 
 ## Vocabulary and Context
 
-The protocol separate the notion of emulator and core. An emulator can be an simple single purpose emulator
-like Snes9x/Dolphin or frontend to multiple platform like RetroArch or Bizhawk.
+The protocol separates the notion of emulator and core. An emulator can be a simple single-purpose emulator
+like Snes9x/Dolphin or a frontend to multiple platforms like RetroArch or Bizhawk.
 
-A core is often responsible for only the emulation part and a frontend like RetroArch provide the handling of
+A core is often responsible for just the emulation part and a frontend like RetroArch provides the handling of
 audio/video and user input.
 
-For the protocol purpose, a regular emulator like Snes9x is an emulator with one core. Something like Bsnes/Higan with
-multiple profils for one core (accuracy/performance/balanced) provide a core for each profil. RetroArch obviously
-provide multiple core.
+In this protocol, a regular emulator like Snes9x is an emulator with one core. Something like Bsnes/Higan with
+multiple profiles for the same core (accuracy/performance/balanced) may provide a core for each profile.
+RetroArch obviously provides multiple cores.
 
-Since emulation and core are often tied, the protocol tend to only offer CORE related commands when it's something
-specific to a core. To try to be more clear, getting the informations about a core is specific to the core, pausing
-the emulation is more general
+Since emulation and core are often tied, the protocol defines it as CORE-related commands when it's something
+specific to a core. As an example, getting the informations about a core is specific to the core, pausing
+the emulation is more general.
 
-### Keywords
+### Disambiguation
 
-Emulator : Refer to the software itself, IE : Snes9x
-Core : The piece of code that handle the plaform emulation eg: Bsnes-core
-Emulation : The emulation of a game
+Emulator: Refers to the whole program, e.g. Snes9x or RetroArch
+Core: The piece of code that handles the plaform emulation, e.g. Bsnes-core
+Emulation: The process of executing the core and thus emulating the platform/game
 
 
 ## TCP Port
 
-The protocol is build on top of TCP.
+The protocol is built on top of TCP.
 
 An emulator implementing this protocol must listen on port 65400, and if already in use increment by 1.
 
@@ -77,7 +77,9 @@ Some commands will require the transfer of binary data after sending a command.
 `size` is encoded in network byte order (big endian).
 If a size is given in the command (e.g. for multi-write) the sizes should match.
 
-**TODO** : is there a block for each write on a multiwrite or it's a block with the whole data?
+There can only be 0 or 1 binary transfers per command.\
+An unexpected binary transfer is to be ignored by the emulator so that it will correctly receive and discard it
+without breaking the stream.
 
 ## Emulator Reply
 
@@ -86,26 +88,40 @@ The first byte of the reply indicates its type : `\n` for an ascii reply or `\0`
 An ascii reply ends when 2 consecutive `\n` are received.
 A binary reply ends when the size is reached.
 
+The reply format is chosen to be easy to implement with just string manipulation (no external libraries)
+and to have a small memory footprint.
+
 ### ASCII reply
 
-A ascii reply is represented as a hash map, with keys and values.
+An ascii reply is represented as a hash map, with keys and values
 
 ```
 \n
 key:value\n
-key1:value2\n
+another_key:another value\n
 \n
 ```
 
-A key name is lower case and separated with _. Value format is free since its depends on its meanings.
+or as a list of hash maps (see last paragraph)
+```
+\n
+name:name1\n
+deatail:detail1\n
+name:name2\n
+detail:detail2\n
+\n
+```
 
-For predefined values (like emulator state) these values are in lower case.
+Key names are lower case and separated by _. Values are arbitrary strings and their meaning depends on the command.
 
-Keys can repeat, the data then represents a `list<map<string,string>>`.
+For predefined constants (like emulator state) values are in lower case.
 
-Whenever a duplicate key is received, a new map is started in the list.
-
-**TODO** : Clarify this.
+Whenever a duplicate key is received, and a list is expected, a new map is started in the list.\
+This means to correctly generate the list
+  * iterate over all key value pairs
+  * check if `key` is already in `map`
+    * no: add key value pair to map
+    * yes: yield the map and start a new one
 
 ### Binary reply
 
@@ -175,15 +191,15 @@ state:<running|paused|stopped|no_game>
 game:<game_id>
 ```
 `game_id` is mandatory when the state is running or paused. It can be a name, filename or hash. 
-It mostly for the client to detect that the loaded game has changed.
+It may be used by the client to detect that the loaded game has changed.
 
 ### EMULATION_PAUSE, EMULATION_STOP, EMULATION_RESET, EMULATION_RESUME, EMULATION_RELOAD
 
 Change emulator state.
 
-EMU_STOP : console power off.\
-EMU_RESET : console soft reset.\
-EMU_RELOAD : reinserting the cartridge/CD if possible or STOP followed by RESUME otherwise.
+EMULATION_STOP: console power off.\
+EMULATION_RESET: console soft reset.\
+EMULATION_RELOAD: reinserting the cartridge/CD if possible or STOP followed by RESUME otherwise.
 
 ### LOAD_GAME `<path/to/game.rom>`
 
@@ -265,10 +281,21 @@ Offsets/addresses that start with $ are hexadecimal, otherwise they are decimal.
 
 * If offset is empty, read entire memory.
 * If size is empty, read from offset to end.
+* If offsetN is given, sizeN can not be omitted for N>=2
 * If reading out of bounds for last offset/size: reply can be short (reply has less bytes than requested).
 * If reading out of bounds for non-last offset/size: reply has to be padded with 0.
 * If **all** addresses are out of bounds the reply can be empty instead of sending padding.
-* If offsetN is given, sizeN can not be omitted for N>=2
+
+How to implement:
+* no offset: return entire memory
+* just offset: return from offset to end
+* otherwise, dynamic: concatenate all regions, the last region may be truncated if out of bounds, others may need padding
+* otherwise, static: allocate a buffer of sum(sizes), clear with 0, copy regions into the buffer
+
+Processing the reply:
+* either: receive buffer, calculate the expected offset, out of bounds means out of bounds
+* or: receive buffer, grow buffer by padding it with 0 to the sum of regions, there will be no out of bounds access
+* detecting out of bounds access is only possible for the last region
 
 Sample: `CORE_READ WRAM;$100;10;512;$a` reads 10 bytes from 0x100 and 10 bytes from 0x200 of WRAM. The reply will be 20 bytes long.
 
@@ -280,9 +307,9 @@ Offsets/addresses that start with $ are hexadecimal otherwise they are decimal.
 
 * If offset is empty, start write at 0
 * If size is empty, use size of binary data.
+* If offsetN is given, sizeN can not be omitted for N>=2
 * If size is shorter than binary data: reply error
 * If size is longer than binary data: reply error
-* If offsetN is given, sizeN can not be omitted for N>=2
 
 Sample: `CORE_WRITE WRAM;$100;10;512;$a` `<20 byte binary block>` writes 10 bytes to 0x100 and 10 bytes to 0x200 of WRAM.
 
