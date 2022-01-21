@@ -45,10 +45,10 @@ An emulator implementing this protocol must listen on port 65400, and if already
 
 ## Client request
 
-A client will mostly communicate with basic commands. The general command syntax is as follow:
+A client will mostly communicate with basic commands and the emulator will reply according to the command. The general command syntax is as follow:
 
 ```
-KEYWORD[ <arguments separated by ';'>]\n
+KEYWORD [ <arguments separated by ';'>]\n
 ```
 
 ### Command Naming
@@ -60,7 +60,7 @@ For other commands the namespace is prepended (e.g. `GAME_INFO`).
 
 ### Command Arguments
 
-If arguments are given, commands and the first argument are separated by a single space.
+If arguments are given, The command and the first argument are separated by a single space.
 Any additionnals arguments are separated by `;`.
 
 ### Number Arguments
@@ -71,6 +71,8 @@ with `$` prefix. So `256` is the same as `$100`.
 ### Binary Transfer to Emulator
 
 Some commands will require the transfer of binary data after sending a command.
+A binary message follows this format:
+
 ```
 <0><4 bytes size><data bytes>
 ```
@@ -88,12 +90,10 @@ The first byte of the reply indicates its type : `\n` for an ascii reply or `\0`
 An ascii reply ends when 2 consecutive `\n` are received.
 A binary reply ends when the size is reached.
 
-The reply format is chosen to be easy to implement with just string manipulation (no external libraries)
-and to have a small memory footprint.
 
 ### ASCII reply
 
-An ascii reply is represented as a hash map, with keys and values
+An ascii reply is represented as an associative array following this format:
 
 ```
 \n
@@ -102,11 +102,11 @@ another_key:another value\n
 \n
 ```
 
-or as a list of hash maps (see last paragraph)
+or as a list of an associative array (see last paragraph)
 ```
 \n
 name:name1\n
-deatail:detail1\n
+detail:detail1\n
 name:name2\n
 detail:detail2\n
 \n
@@ -116,16 +116,29 @@ Key names are lower case and separated by _. Values are arbitrary strings and th
 
 For predefined constants (like emulator state) values are in lower case.
 
-Whenever a duplicate key is received, and a list is expected, a new map is started in the list.\
-This means to correctly generate the list
-  * iterate over all key value pairs
-  * check if `key` is already in `map`
-    * no: add key value pair to map
-    * yes: yield the map and start a new one
+Whenever a duplicate key is received this means the reply is a list of associative array.
+Example:
+```
+\n
+name:name1\n
+detail:detail1\n
+name:name2\n
+detail:detail2\n
+\n
+```
+
+This can be translated as this json like data:
+```
+[ 
+{ name : "name1", detail : "detail1"}, 
+{ name : "name2", detail : "details2"}
+]
+```
+
 
 ### Binary reply
 
-A binary reply is the same as a binary request.
+A binary reply is the same as a binary message from a client.
 
 ```
 <0><4 bytes size><data bytes>
@@ -134,29 +147,32 @@ A binary reply is the same as a binary request.
 
 ### Error reply
 
-An error is a special ascii reply, with an `error` key.
+An error is a special ascii reply, with an `error` and `reason` key.
 
 ```
 \n
-error:<message>\n
+error:error_type\n
+reason:<message>\n
 \n
 ```
+
+Error type are as follow :
+
+* invalid_command : The command is invalid or unsupported by the emulator
+* invalid_argument : The arguments for the command are not what the command expect
+* not_allowed : The operation is not allowed
 
 ### Success
 
 Any ascii reply that does not contain an `error` key is a success.
 
-If a command does not request data or information, the emulator must still send a `\n\n` message.
-
-
-### Empty listings
+The smallest succes you can receive from a command is simply an empty reply
 
 ```
 \n
 \n
 ```
 
-A regular success is an empty list.
 
 ## Mandatory commands
 
@@ -173,13 +189,17 @@ Gives information about the emulator
 ```
 name:<name>
 version:<version>
-id:<a id to identify the running instance of the emulator>
+nwa_verion:<version of the protocol supported>
+id:<an id to identify the running instance of the emulator>
 commands:<string separated by commas of the implemented commands>
 user_defined...
 ```
 
-`name`, `version`, `id` and `commands` are mandatory. The id is needed to identify the emulator since users can start multiples instances
-of the same emulator on the same system. The commands allow the client to know what is supported by the emulator.
+`name`, `version`, `nwa_version`, `id`,  and `commands` are mandatory.
+
+The id is needed to identify the emulator since users can start multiples instances of the same emulator on the same system.
+
+The `commands` field allow the client to know what is supported by the emulator.
 
 
 ### EMULATION_STATUS
@@ -249,7 +269,7 @@ Give information about the currently loaded core. See CORE_INFO.
 
 Load the specified core.
 
-If `<core_name>` is empty, unload core.
+If `<core_name>` is empty, unload core if applicable.
 
 ### CORE_RESET
 
@@ -273,6 +293,9 @@ access:rw
 size:2048
 ```
 
+Be careful that these value can be changed between 2 games for the same core. For example SNES games
+have differents SRAM size.
+
 ### CORE_READ `<memory_name>` [`<offset>` [`<size>` [`<offset2>` `<size2>` ....]]]
 
 Read one or more ranges from a memory. The emulator will send a binary reply.
@@ -282,26 +305,17 @@ Offsets/addresses that start with $ are hexadecimal, otherwise they are decimal.
 * If offset is empty, read entire memory.
 * If size is empty, read from offset to end.
 * If offsetN is given, sizeN can not be omitted for N>=2
-* If reading out of bounds for last offset/size: reply can be short (reply has less bytes than requested).
-* If reading out of bounds for non-last offset/size: reply has to be padded with 0.
-* If **all** addresses are out of bounds the reply can be empty instead of sending padding.
+* If reading out of bounds for last offset/size: reply size can be shortened (reply has less bytes than requested).
+* If reading out of bounds for non-last offset/size: the command error.
+* If one address is out of bounds the command returns an error.
 
-How to implement:
-* no offset: return entire memory
-* just offset: return from offset to end
-* otherwise, dynamic: concatenate all regions, the last region may be truncated if out of bounds, others may need padding
-* otherwise, static: allocate a buffer of sum(sizes), clear with 0, copy regions into the buffer
-
-Processing the reply:
-* either: receive buffer, calculate the expected offset, out of bounds means out of bounds
-* or: receive buffer, grow buffer by padding it with 0 to the sum of regions, there will be no out of bounds access
-* detecting out of bounds access is only possible for the last region
+Note : for a multiread you still receive only one binary reply
 
 Sample: `CORE_READ WRAM;$100;10;512;$a` reads 10 bytes from 0x100 and 10 bytes from 0x200 of WRAM. The reply will be 20 bytes long.
 
 ### CORE_WRITE `<memory name>` [`<offset>` [`<size>` [`<offset2>` `<size2>` ....]]]
 
-Write one or more ranges to a memory followed by binary data.
+Write one or more ranges to a memory. The command is followed by binary message.
 
 Offsets/addresses that start with $ are hexadecimal otherwise they are decimal.
 
@@ -325,10 +339,10 @@ If supported by the emulator, should behave like the "continue" button when insi
 
 Load a savestate from filename.
 
-If the emulator only supports "quick" (not arbitrary filename) savestates,
-arbitrary filename support has to be added or left unsupported.
+If the emulator only supports "quick" (not an arbitrary filepath) savestates,
+arbitrary filename support has to be added or the command left unsupported.
 
-There is no advantage to exposing "quick" savestates interface.
+There is no real value to exposing "quick" savestates interface.
 
 ### SAVE_STATE `<filename>`
 
