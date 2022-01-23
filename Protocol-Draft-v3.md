@@ -184,8 +184,8 @@ The following commands must be implemented: `EMULATOR_INFO`, `EMULATION_STATUS`,
 
 ### MY_NAME_IS <client name>
 
-This comment allow the client to specifiy its name. This is useful if the emulator want to identify what is connecting
-to itself.
+This command allows the client to specifiy its name. This is useful if the emulator wants to identify what is connecting
+to itself. This should always return a success and should probably lead to a display on the emulator (if possible)
 
 ### EMULATOR_INFO
 
