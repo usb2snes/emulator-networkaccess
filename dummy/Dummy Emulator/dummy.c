@@ -17,13 +17,13 @@
 #define send_hash_reply(S, K, ...) generic_poll_server_send_hash_reply(S, K, __VA_ARGS__)
 
 const generic_emu_nwa_commands_map_t generic_emu_mwa_map = {
-    {EMU_INFO, dummy_emu_info},
-    {EMU_STATUS, dummy_emu_status},
-    {EMU_PAUSE, dummy_emu_pause},
-    {EMU_STOP, dummy_emu_stop},
-    {EMU_RESET, dummy_emu_reset},
-    {EMU_RESUME, dummy_emu_resume},
-    {EMU_RELOAD, dummy_emu_reload},
+    {EMULATOR_INFO, dummy_emu_info},
+    {EMULATION_STATUS, dummy_emu_status},
+    {EMULATION_PAUSE, dummy_emu_pause},
+    {EMULATION_STOP, dummy_emu_stop},
+    {EMULATION_RESET, dummy_emu_reset},
+    {EMULATION_RESUME, dummy_emu_resume},
+    {EMULATION_RELOAD, dummy_emu_reload},
     {LOAD_GAME, dummy_load_game},
     {GAME_INFO, dummy_game_info},
     {CORES_LIST, dummy_cores_list},
