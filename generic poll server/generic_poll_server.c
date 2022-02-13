@@ -267,7 +267,7 @@ static void process_command(generic_poll_server_client* client)
         return;
     }
     char **args = (char **) malloc(10 * sizeof(char*));
-    char cmd[50];
+    char *cmd = (char*) malloc(client->pending_size);
     bool cmd_has_arg = true;
 
     args[0] = NULL;
@@ -344,6 +344,7 @@ static void process_command(generic_poll_server_client* client)
         free(args[i]);
     }
     free(args);
+    free(cmd);
 }
 
 
