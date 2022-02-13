@@ -173,9 +173,12 @@ static void write_to_socket(SOCKET socket, const char* str)
 
 bool dummy_emu_info(SOCKET socket, char ** args, int ac)
 {
-    send_full_hash_reply(socket, 2, 
+    send_full_hash_reply(socket, 5, 
                             "name", "Dummy emulator",
-                            "version", "0.1");
+                            "version", "0.1",
+                            "id", "I am dumb",
+                            "nwa_version", "1.0",
+                            "commands", "EMULATOR_INFO,EMULATION_STATUS,GAME_INFO,CORES_LIST,CORE_CURRENT_INFO,CORE_INFO,EMULATION_PAUSE,EMULATION_RESUME,EMULATION_RESET,EMULATION_STOP");
     return true;
 }
 
