@@ -186,6 +186,12 @@ The following commands must be implemented: `EMULATOR_INFO`, `EMULATION_STATUS`,
 
 This command allows the client to specifiy its name. This is useful if the emulator wants to identify what is connecting
 to itself. This should always return a success and should probably lead to a display on the emulator (if possible)
+  
+This returns the client name, note that the emulator is free to change the name passed if 2 clients share the same name.
+  
+```
+name:<client name>
+```
 
 ### EMULATOR_INFO
 
