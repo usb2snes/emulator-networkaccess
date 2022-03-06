@@ -178,9 +178,20 @@ The smallest succes you can receive from a command is simply an empty reply
 
 For more details about each commands see after this part.
 
-The following commands must be implemented: `EMULATOR_INFO`, `EMULATION_STATUS`, `CORES_LIST`, `CORE_INFO`, `CORE_CURRENT_INFO`
+The following commands must be implemented: `EMULATOR_INFO`, `EMULATION_STATUS`, `CORES_LIST`, `CORE_INFO`, `CORE_CURRENT_INFO`, `MY_NAME_IS`
 
 ## Commands
+
+### MY_NAME_IS <client name>
+
+This command allows the client to specifiy its name. This is useful if the emulator wants to identify what is connecting
+to itself. This should always return a success and should probably lead to a display on the emulator (if possible)
+  
+This returns the client name, note that the emulator is free to change the name passed if 2 clients share the same name.
+  
+```
+name:<client name>
+```
 
 ### EMULATOR_INFO
 
