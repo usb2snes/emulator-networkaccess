@@ -1,154 +1,14 @@
 
 mod nwa;
-use std::io::ErrorKind;
+mod nwachecker;
 use std::process::exit;
 use std::net::{ToSocketAddrs};
 use crate::nwa::nwa::*;
-use colored::*;
+use crate::nwachecker::nwachecker::*;
 
-struct NWACheck {
-    name : String,
-    description : String,
-    passed : bool,
-    sub_checks : Vec<NWACheck>
-}
-
-struct NWAChecker {
-    all_checks : Vec<NWACheck>
-}
-
-impl NWAChecker {
-    pub fn new () -> NWAChecker {
-        NWAChecker {
-            all_checks : vec![]
-        }
-    }
-    pub fn new_check(&mut self, short_description : &str, description : &str) {
-        self.all_checks.push(NWACheck {
-            name : short_description.to_string(),
-            description : description.to_string(),
-            passed : false,
-            sub_checks : vec![]
-        });
-        println!("* Checking : {}", short_description);
-    }
-    pub fn set_passed(&mut self, p : bool) {
-        self.all_checks.last_mut().unwrap().passed = p;
-    }
-    pub fn current_check_expect_ascii_hash(&mut self, reply : &EmulatorReply) -> bool {
-        let current_check = self.all_checks.last_mut().unwrap();
-        match reply {
-            EmulatorReply::Ascii(ascii_rep) => {
-                match ascii_rep {
-                    AsciiReply::Hash(map) => {
-                        current_check.passed = true;
-                    }
-                    _ => {current_check.passed = false;}
-                }
-            }
-            _ => {current_check.passed = false}
-        }
-        if current_check.passed == false {
-            error(format!("Did not receive an ascii map reply : {:?}", reply).as_str());
-        }
-        current_check.passed
-    }
-    pub fn current_check_expect_ascii_ok(&mut self, reply :& EmulatorReply) -> bool {
-        let current_check = self.all_checks.last_mut().unwrap();
-        match reply {
-            EmulatorReply::Ascii(ascii_rep) => {
-                match ascii_rep {
-                    AsciiReply::Ok => {
-                        current_check.passed = true;
-                    }
-                    _ => {current_check.passed = false;}
-                }
-            }
-            _ => {current_check.passed = false}
-        }
-        if current_check.passed == false {
-            error(format!("Did not receive an ascii ok (empty success) reply : {:?}", reply).as_str());
-        }
-        current_check.passed
-    }
-    pub fn current_check_expect_error(&mut self, reply :& EmulatorReply, kind : nwa::nwa::ErrorKind) -> bool {
-        let current_check = self.all_checks.last_mut().unwrap();
-        match reply {
-            EmulatorReply::Error(error) => {
-                current_check.passed = error.kind == kind;
-            }
-            _ => {current_check.passed = false}
-        }
-        if current_check.passed == false {
-            error(format!("Did not receive the proper error reply, expected : {:?} - got {:?}", kind, reply).as_str());
-        }
-        current_check.passed
-    }
-    pub fn current_check_add_key_check(&mut self, reply : &EmulatorReply, key : &str, value : Option<&str>) -> Option<String> {
-        let current_check = self.all_checks.last_mut().unwrap();
-        current_check.sub_checks.push({
-            NWACheck {
-                name : String::from("subcheck"),
-                description : String::from("no desc"),
-                passed : false,
-                sub_checks : vec![]
-            }
-        });
-        let mut current_subcheck = current_check.sub_checks.last_mut().unwrap();
-        let mut key_value : Option<String> = None;
-        if let EmulatorReply::Ascii(asci_rep) = reply {
-            if let AsciiReply::Hash(map) = asci_rep {
-                if map.contains_key(key) {
-                    key_value = Some(map.get(key).unwrap().clone());
-                }
-                if value == None {
-                    current_subcheck.passed = map.contains_key(key);
-                } else {
-                    current_subcheck.passed = map.get(key).unwrap() == value.unwrap();
-                }
-            } else {
-                current_subcheck.passed = false;
-            }
-        }
-        expect_true(current_subcheck.passed, format!("\tChecking for mandatory field <{:?}> : ", key).as_str());
-        return key_value;
-    }
-}
-
-fn expect_ok(reply : EmulatorReply) {
-    match reply {
-        EmulatorReply::Ascii(AsciiReply::Ok) => {println!("{}", "Ok".green())},
-        _ => {println!("{} Expected an Ok reply", "Fail".red())}
-    }
-}
-
-fn expect_ascii(reply : EmulatorReply, key : Option<&str>, value : Option<&str>) {
-
-}
-
-fn expect_true(b : bool, msg : &str) {
-    print!("{}", msg);
-    if b {
-        print!("{}", "ok".green())
-    } else {
-        print!("{}", "ko".red())
-    }
-    println!();
-}
-
-fn new_check(msg : &str) {
-    println!("* Checking : {}", msg);
-}
-
-fn warning(msg : &str) {
-    println!("\t{} {}", "Warning".yellow(), msg)
-}
-
-fn error(msg : &str) {
-    println!("\t{} {}", "Error".red(), msg)
-}
 fn main() {
     let mut checker : NWAChecker = NWAChecker::new();
+    let mut available_commands : Vec<String> = vec![];
     checker.new_check("Address type for localhost",
      "Checking if the emulator listen on the first localhost address. 
      Meaning if it properly bind on the first one, like in case of ipv6");
@@ -181,13 +41,13 @@ fn main() {
         let cmd = checker.current_check_add_key_check(&reply, "commands", None);
         if cmd != None {
             let copy = cmd.unwrap().clone();
-            let commands : Vec<&str> = copy.split(',').collect();
+            available_commands = copy.split(',').map(str::to_string).collect::<Vec<String>>().to_owned();
             println!("\tChecking for mandatory commands");
-            expect_true(commands.contains(&"EMULATOR_INFO"), "\tChecking for mandatory command EMULATOR_INFO : ");
-            expect_true(commands.contains(&"EMULATION_STATUS"), "\tChecking for mandatory command EMULATION_STATUS : ");
-            expect_true(commands.contains(&"CORES_LIST"), "\tChecking for mandatory command CORES_LIST : ");
-            expect_true(commands.contains(&"CORE_INFO"), "\tChecking for mandatory command CORE_INFO : ");
-            expect_true(commands.contains(&"CORE_CURRENT_INFO"), "\tChecking for mandatory command CORE_CURRENT_INFO : ");
+            expect_true(available_commands.contains(&String::from("EMULATOR_INFO")), "\tChecking for mandatory command EMULATOR_INFO : ");
+            expect_true(available_commands.contains(&String::from("EMULATION_STATUS")), "\tChecking for mandatory command EMULATION_STATUS : ");
+            expect_true(available_commands.contains(&String::from("CORES_LIST")), "\tChecking for mandatory command CORES_LIST : ");
+            expect_true(available_commands.contains(&String::from("CORE_INFO")), "\tChecking for mandatory command CORE_INFO : ");
+            expect_true(available_commands.contains(&String::from("CORE_CURRENT_INFO")), "\tChecking for mandatory command CORE_CURRENT_INFO : ");
         }
     }
     checker.new_check("Mandatory CORES_LIST command", "Test if the mandatory CORES_LIST command reply");
@@ -268,7 +128,10 @@ fn main() {
         checker.current_check_add_key_check(&reply, "platform", Some(&available_platform));
         checker.current_check_add_key_check(&reply, "name", None);
     }
-
+    checker.new_check("Checking Mandatory MY_NAME_IS command", "Test the MY_NAME_IS command, check if it returns the id");
+    let reply = nwa.execute_command("MY_NAME_IS", Some("NWA validator")).expect("Error with socket");
+    checker.current_check_expect_ascii_hash(&reply);
+    checker.current_check_add_key_check(&reply, "name", Some("NWA validator"));
     checker.new_check("Unexpected binary block", 
     "Test how the emulator react when giving a binary block when expecting a command");
     let mut data : Vec<u8> = vec![0;3];
@@ -277,5 +140,51 @@ fn main() {
     data[2] = 3;
     nwa.send_data(data);
     let reply = nwa.get_reply().expect("Error with socket");
+    println!("After getting error reply");
     checker.current_check_expect_error(&reply, nwa::nwa::ErrorKind::ProtocolError);
+    let reply = nwa.execute_command("MY_NAME_IS", Some("NWA validator")).expect("Error with socket");
+
+    if available_commands.contains(&String::from("CORE_MEMORIES")) {
+        let mut available_memory_name = String::from("PLACEHOLDER");
+        let mut available_memory_size = 0;
+        checker.new_check("Checking CORE_MEMORIES command", "Checking if CORE_MEMORIES behave correctly");
+        let reply = nwa.execute_command("CORE_MEMORIES", None).expect("Error with socket");
+        let cp = &reply;
+        match cp {
+            EmulatorReply::Ascii(rep_asci) => {
+                match rep_asci {
+                    AsciiReply::Hash(map) => {
+                        checker.current_check_add_key_check(&reply, "name", None);
+                        checker.current_check_add_key_check(&reply, "access", None);
+                        if map.contains_key("name") && map.contains_key("access") && map.get("access").unwrap().contains("r") {
+                            available_memory_name = map.get("name").unwrap().clone();
+                            if map.contains_key("size") {
+                                available_memory_size = map.get("size").unwrap().parse::<i32>().unwrap();
+                            }
+                        }
+                    },
+                    AsciiReply::ListHash(list_map) => {
+                        for map in list_map {
+                            checker.current_check_add_key_check(&reply, "name", None);
+                            checker.current_check_add_key_check(&reply, "platform", None);
+                            if available_memory_name == "PLACEHOLDER" && 
+                               map.contains_key("name") && map.contains_key("access") && map.get("access").unwrap().contains("r") {
+                                available_memory_name = map.get("name").unwrap().clone();
+                                if map.contains_key("size") {
+                                    available_memory_size = map.get("size").unwrap().parse::<i32>().unwrap();
+                                }
+                            }
+                        }
+                    }
+                    _ => {error("Replied with an invalid Ascii reply")}
+                }
+            },
+        _ => {error(format!("Did not receive an ascii reply : {:?}", cp).as_str())}
+        }
+        if available_memory_name != "PLACEHOLDER" {
+            checker.new_check("Basic CORE_READ", "Reading 5 bytes from one readable memory");
+            let reply = nwa.execute_command("CORE_READ", Some(format!("{:};0;5", available_memory_name).as_str())).expect("Error with socket");
+            checker.current_check_expect_binary_block(&reply, 5);
+        }
+    }
 }
