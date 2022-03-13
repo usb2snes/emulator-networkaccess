@@ -113,13 +113,19 @@ impl NWAChecker {
         let mut key_value : Option<String> = None;
         if let EmulatorReply::Ascii(asci_rep) = reply {
             if let AsciiReply::Hash(map) = asci_rep {
+                let mut has_key = false;
                 if map.contains_key(key) {
                     key_value = Some(map.get(key).unwrap().clone());
+                    has_key = true;
                 }
                 if value == None {
                     current_subcheck.passed = map.contains_key(key);
                 } else {
-                    current_subcheck.passed = map.get(key).unwrap() == value.unwrap();
+                    if has_key {
+                        current_subcheck.passed = map.get(key).unwrap() == value.unwrap();
+                    } else {
+                        current_subcheck.passed = false;
+                    }
                 }
             } else {
                 current_subcheck.passed = false;
