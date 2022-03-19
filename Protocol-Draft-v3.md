@@ -185,21 +185,7 @@ eg something not starting with an ascii caracter or a '0' byte or sending someth
 -A application level error is specific to a command or what the emulator does not allow, 
 eg 'MY_NAME_IS' without an argument is an 'invalid_argument' error.
 
-On protocol level there 2 scenario we recommand to act like specified bellow:
-
-If the client send a binary block when it's not expected, the emulator returns a 'protocol_error' error 
-but can ignore the block since it's a recoverable error.
-
-If the client performs a command expecting a binary block and send another command request, the emulator returns a 'protocol_error' error 
-and should probably close the connection with the client since it's likely to lead to ambiquous behaviour like presented in the following scenarii
-
-```
-bCORE_WRITE sram;10;42
-bCORE_WRITE sram;80;23
-<binary block>
-```
-
-Since the protocol does not specify a queue system for command, it's hard to tell if the binary block is for the first or second `bCORE_WRITE`
+When a protocol error is encountered, a 'protocol_error' should be sent, the connection is broken and can be closed.
 
 ## Mandatory commands
 
