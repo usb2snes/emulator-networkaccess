@@ -71,7 +71,7 @@ with `$` prefix. So `256` is the same as `$100`.
 ### Binary Transfer to Emulator
 
 Some commands will require the transfer of binary data after sending a command.
-The command name must be prefixed by a 'b' lower case to indicate it expects a binary block.
+The command name must have a lower case 'b' prefix to indicate it expects a binary block.
 A binary message follows this format:
 
 ```
