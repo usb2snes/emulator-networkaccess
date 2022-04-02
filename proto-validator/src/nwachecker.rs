@@ -29,6 +29,12 @@ impl NWAChecker {
         });
         println!("* Checking : {}", short_description);
     }
+    pub fn end_of_check(&mut self) {
+        let current_check = self.all_checks.last().unwrap();
+        if current_check.passed == false {
+            
+        }
+    }
     pub fn set_passed(&mut self, p : bool) {
         self.all_checks.last_mut().unwrap().passed = p;
     }
@@ -103,7 +109,7 @@ impl NWAChecker {
         let current_check = self.all_checks.last_mut().unwrap();
         current_check.sub_checks.push({
             NWACheck {
-                name : String::from("subcheck"),
+                name : String::from(format!("Checking for mandatory key {:}", key)),
                 description : String::from("no desc"),
                 passed : false,
                 sub_checks : vec![]
@@ -133,6 +139,46 @@ impl NWAChecker {
         }
         expect_true(current_subcheck.passed, format!("\tChecking for mandatory field <{:?}> : ", key).as_str());
         return key_value;
+    }
+    pub fn current_check_add_subcheck(&mut self, name : &str, description : &str, passed : bool) {
+        let current_check = self.all_checks.last_mut().unwrap();
+        expect_true(passed, format!("\tChecking for {:} : ", name).as_str());
+        current_check.sub_checks.push({
+            NWACheck {
+                name : name.to_string(),
+                description : description.to_string(),
+                passed : passed,
+                sub_checks : vec![]
+            }
+        });
+    }
+    pub fn repport(&mut self) {
+        let mut passed_count = 0;
+        let total_check = self.all_checks.len();
+        println!("\n\nRepport for the run:\n");
+        for check in &self.all_checks {
+            let mut c_passed = true;
+            if !check.sub_checks.is_empty() {
+                for sub_check in &check.sub_checks {
+                    if sub_check.passed == false {
+                        c_passed = false;
+                    }
+                }
+            }
+            if c_passed && check.passed {
+                passed_count += 1;
+            } else {
+                println!("Check failed : {:}\n\t{:}", check.name, check.description);
+                if !check.sub_checks.is_empty() {
+                    for sub_check in &check.sub_checks {
+                        if sub_check.passed == false {
+                            println!("Sub check failed : {:}", sub_check.name)
+                        }
+                    }    
+                }
+            }
+        }
+        println!("Check passed : {:} / {:}", passed_count, total_check);
     }
 }
 

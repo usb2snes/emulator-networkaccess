@@ -11,7 +11,7 @@ fn main() {
     let mut available_commands : Vec<String> = vec![];
     checker.new_check("Address type for localhost",
      "Checking if the emulator listen on the first localhost address. 
-     Meaning if it properly bind on the first one, like in case of ipv6");
+     Meaning if it properly bind on the first one, like in case of ipv6. Note that this is not specified but should be the right behavior");
     let mut has_ipv6 = false;
     let addr : Vec<_> = String::from("localhost:65400").to_socket_addrs().expect("Can't resolve address").collect();
     if addr.len() == 2 {
@@ -21,6 +21,7 @@ fn main() {
     let mut nwa : NWASyncClient = match nwa {
         Err(err) => {
             if (has_ipv6) {
+                checker.set_passed(false);
                 warning("Failed to connect to localhost as ipv6, trying explictly 127.0.0.1");
                 NWASyncClient::connect("127.0.0.1", 65400).expect("Failed to connect")
             } else {
@@ -28,9 +29,9 @@ fn main() {
                 exit(1)
             }
         }
-        _ => {nwa.unwrap()}
+        _ => {checker.set_passed(true);nwa.unwrap()}
     };
-    checker.set_passed(true);
+    
     checker.new_check("Mandatory EMULATOR_INFO command", "Testing for the firt requiered command");
     let reply = nwa.execute_command("EMULATOR_INFO", None).expect("Error with socket");
     if checker.current_check_expect_ascii_hash(&reply) {
@@ -53,16 +54,21 @@ fn main() {
     checker.new_check("Mandatory CORES_LIST command", "Test if the mandatory CORES_LIST command reply");
     let reply = nwa.execute_command("CORES_LIST", None).expect("Error with socket");
     let mut available_platform : String = String::from("PLACEHOLDER");
+    let mut available_core : Option<String> = None;
     let cp = &reply;
     match cp {
         EmulatorReply::Ascii(rep_asci) => {
             match rep_asci {
                 AsciiReply::Hash(map) => {
                     checker.current_check_add_key_check(&reply, "name", None);
+                    if map.contains_key("name") {
+                        available_core = Some(map.get("name").unwrap().clone());
+                    }
                     checker.current_check_add_key_check(&reply, "platform", None);
                     if map.contains_key("platform") {
                         available_platform = map.get("platform").unwrap().clone();
                     }
+                    checker.set_passed(true);
                 },
                 AsciiReply::ListHash(list_map) => {
                     for map in list_map {
@@ -71,6 +77,10 @@ fn main() {
                         if map.contains_key("platform") && available_platform == "PLACEHOLDER" {
                             available_platform = map.get("platform").unwrap().clone();
                         }
+                        if map.contains_key("name") && available_core == None {
+                            available_core = Some(map.get("core").unwrap().clone());
+                        }
+                        checker.set_passed(true);
                     }
                 }
                 _ => {error("Replied with an invalid Ascii reply")}
@@ -92,6 +102,7 @@ fn main() {
                         if map.contains_key("platform") {
                             available_platform = map.get("platform").unwrap().clone();
                         }
+                        checker.set_passed(true);
                     },
                     AsciiReply::ListHash(list_map) => {
                         for map in list_map {
@@ -101,6 +112,7 @@ fn main() {
                                 available_platform = map.get("platform").unwrap().clone();
                             }
                         }
+                        checker.set_passed(true);
                     }
                     _ => {error("Replied with an invalid Ascii reply")}
                 }
@@ -115,6 +127,7 @@ fn main() {
 
     checker.new_check("Checking Mandatory EMULATION_STATUS command", "Test the mandatory EMULATION_STATUS command");
     let reply = nwa.execute_command("EMULATION_STATUS", None).expect("Error with socket");
+    checker.current_check_expect_ascii_hash(&reply);
     let state =  checker.current_check_add_key_check(&reply, "state", None);
     if state != None {
         let state = state.unwrap();
@@ -122,28 +135,54 @@ fn main() {
             checker.current_check_add_key_check(&reply, "game", None);
         }
     }
-    if available_platform != "PLACEHOLDER" {
+    if let Some(core) = available_core {
         checker.new_check("Mandatory CORE_INFO", "Testing the mandatory CORE_INFO command");
-        let reply = nwa.execute_command("CORE_INFO", Some(&available_platform)).expect("Error with socket");
+        let reply = nwa.execute_command("CORE_INFO", Some(core.as_str())).expect("Error with socket");
+        checker.current_check_expect_ascii_hash(&reply);
         checker.current_check_add_key_check(&reply, "platform", Some(&available_platform));
-        checker.current_check_add_key_check(&reply, "name", None);
+        checker.current_check_add_key_check(&reply, "name", Some(core.as_str()));
     }
+    checker.new_check("Mandatory CORE_INFO with invalid core name", "Test if the CORE_INFo command return properly an error when given a uncorrect core name");
+    let reply = nwa.execute_command("CORE_INFO", Some("invalid_core_name")).expect("Error with socket");
+    checker.current_check_expect_error(&reply, nwa::nwa::ErrorKind::InvalidArgument);
     checker.new_check("Checking Mandatory MY_NAME_IS command", "Test the MY_NAME_IS command, check if it returns the id");
     let reply = nwa.execute_command("MY_NAME_IS", Some("NWA validator")).expect("Error with socket");
     checker.current_check_expect_ascii_hash(&reply);
     checker.current_check_add_key_check(&reply, "name", Some("NWA validator"));
     checker.new_check("Unexpected binary block", 
-    "Test how the emulator react when giving a binary block when expecting a command");
+    "Test how the emulator react when giving a binary block when expecting a command, we expect a protocol error and a closed connection");
     let mut data : Vec<u8> = vec![0;3];
     data[0] = 1;
     data[1] = 2;
     data[2] = 3;
     nwa.send_data(data);
     let reply = nwa.get_reply().expect("Error with socket");
-    println!("After getting error reply");
     checker.current_check_expect_error(&reply, nwa::nwa::ErrorKind::ProtocolError);
+    let reply = nwa.execute_command("EMULATOR_INFO", None);
+    let mut p = false;
+    if let Err(err) = reply {
+        if err.kind() == std::io::ErrorKind::ConnectionAborted {
+            p = true;
+        }
+    } else {
+        nwa.close()
+    }
+    checker.current_check_add_subcheck("The emulator closed the connection", "After a protocol error the emulator should close the connection", p);
+    nwa.reconnected();
     let reply = nwa.execute_command("MY_NAME_IS", Some("NWA validator")).expect("Error with socket");
-
+    let reply = nwa.execute_command("EMULATION_STATUS", None).expect("Socket error");
+    let mut state = String::from("no_game");
+    match reply {
+        EmulatorReply::Ascii(ascii_reply) => {
+            match ascii_reply {
+                AsciiReply::Hash(hash) => {
+                    state = hash.get("state").unwrap().to_string();
+                }
+                _ => {}
+            }
+        }
+        _ => {}
+    }  
     if available_commands.contains(&String::from("CORE_MEMORIES")) {
         let mut available_memory_name = String::from("PLACEHOLDER");
         let mut available_memory_size = 0;
@@ -152,8 +191,12 @@ fn main() {
         let cp = &reply;
         match cp {
             EmulatorReply::Ascii(rep_asci) => {
+                if state == "no_game" {
+                    warning("No game is running, CORE_MEMORIES should probably not return something usefull");
+                }
                 match rep_asci {
                     AsciiReply::Hash(map) => {
+                        checker.set_passed(true);
                         checker.current_check_add_key_check(&reply, "name", None);
                         checker.current_check_add_key_check(&reply, "access", None);
                         if map.contains_key("name") && map.contains_key("access") && map.get("access").unwrap().contains("r") {
@@ -164,6 +207,7 @@ fn main() {
                         }
                     },
                     AsciiReply::ListHash(list_map) => {
+                        checker.set_passed(true);
                         for map in list_map {
                             checker.current_check_add_key_check(&reply, "name", None);
                             checker.current_check_add_key_check(&reply, "platform", None);
@@ -179,7 +223,8 @@ fn main() {
                     _ => {error("Replied with an invalid Ascii reply")}
                 }
             },
-        _ => {error(format!("Did not receive an ascii reply : {:?}", cp).as_str())}
+            EmulatorReply::Error(err) => { checker.set_passed(true); }
+        _ => {error(format!("Did not receive an ascii or error reply : {:?}", cp).as_str())}
         }
         if available_memory_name != "PLACEHOLDER" {
             checker.new_check("Basic CORE_READ", "Reading 5 bytes from one readable memory");
@@ -187,4 +232,5 @@ fn main() {
             checker.current_check_expect_binary_block(&reply, 5);
         }
     }
+    checker.repport();
 }

@@ -2,9 +2,9 @@ pub mod nwa {
 
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::net::{SocketAddr, TcpStream, ToSocketAddrs};
+use std::net::{SocketAddr, TcpStream, ToSocketAddrs, Shutdown};
 use std::io::{Write, Read, BufReader, BufRead};
-use std::ptr::read;
+//use std::ptr::read;
 use std::time::Duration;
 
 #[derive(Debug)]
@@ -37,7 +37,8 @@ pub enum EmulatorReply {
 
 pub struct NWASyncClient {
     connection : TcpStream,
-    port : u32
+    port : u32,
+    addr : SocketAddr
 }
 
 impl NWASyncClient {
@@ -47,7 +48,8 @@ impl NWASyncClient {
         let co = TcpStream::connect_timeout(&addr[0], Duration::from_millis(1000))?;
         Ok(NWASyncClient {
             connection : co,
-            port : port
+            port : port,
+            addr : addr[0]
         })
     }
 
@@ -87,7 +89,7 @@ impl NWASyncClient {
                 let end_key = cpt;
                 // Should have stopped on :
                 if line[cpt] == b'\n' {
-                    return Err(std::io::Error::new(std::io::ErrorKind::Other, "Hello error"))
+                    return Err(std::io::Error::new(std::io::ErrorKind::Other, "Mal formed reply"))
                 }
                 cpt += 1;
                 let offset = cpt;
@@ -118,7 +120,7 @@ impl NWASyncClient {
         if first_byte == 0 {
             let mut header = vec![0;4];
             read_stream.read(&mut header)?;
-            println!("Header : {:?}", header);
+            //println!("Header : {:?}", header);
             let mut size : u32 = 0;
             size = (header[0] as u32) << 24;
             size += (header[1] as u32) << 16;
@@ -149,6 +151,21 @@ impl NWASyncClient {
         buf[4] = (size & 0xFF) as u8;
         self.connection.write(&buf);
         self.connection.write(&data);
+    }
+    pub fn is_connected(&mut self) -> bool {
+        let mut buf = vec![0;0];
+        if let Ok(usize) = self.connection.peek(&mut buf) {
+            return true
+        }
+        return false
+    }
+
+    pub fn close(&mut self) {
+        self.connection.shutdown(Shutdown::Both);
+    }
+    pub fn reconnected(&mut self) -> Result<bool, std::io::Error> {
+        self.connection = TcpStream::connect_timeout(&self.addr, Duration::from_millis(1000))?;
+        return Ok(true);
     }
 }
 
