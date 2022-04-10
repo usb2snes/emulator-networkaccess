@@ -63,6 +63,8 @@ Commands are all upper case ASCII. Multiple words are separated by `_`.
 For `LOAD` and `SAVE` the namespace is appended (e.g. `LOAD_GAME`).\
 For other commands the namespace is prepended (e.g. `GAME_INFO`).
 
+A command requiering binary data must be prefixed with a `b` lowercase, see later.
+
 ### Command Arguments
 
 If arguments are given, The command and the first argument are separated by a single space.
@@ -76,6 +78,7 @@ with `$` prefix. So `256` is the same as `$100`.
 ### Binary Transfer to Emulator
 
 Some commands will require the transfer of binary data after sending a command.
+The command name must have a lower case 'b' prefix to indicate it expects a binary block.
 A binary message follows this format:
 
 ```
@@ -84,9 +87,7 @@ A binary message follows this format:
 `size` is encoded in network byte order (big endian).
 If a size is given in the command (e.g. for multi-write) the sizes should match.
 
-There can only be 0 or 1 binary transfer per command.\
-An unexpected binary transfer is to be ignored by the emulator so that it will correctly receive and discard it
-without breaking the stream.
+There can only be 0 or 1 binary transfers per command.
 
 ## Emulator Reply
 
@@ -178,6 +179,18 @@ The smallest succes you can receive from a command is simply an empty reply
 \n
 \n
 ```
+
+## Handling errors
+
+There are 2 mains type of error. 
+
+-A protocol error is an error in the way message are transmited, etheir is an invalid message, 
+eg something not starting with an ascii caracter or a '0' byte or sending something not expected.
+
+-A application level error is specific to a command or what the emulator does not allow, 
+eg 'MY_NAME_IS' without an argument is an 'invalid_argument' error.
+
+When a protocol error is encountered, a 'protocol_error' should be sent, the connection is broken and can be closed.
 
 
 ## Mandatory commands
@@ -334,7 +347,7 @@ Note : for a multiread you still receive only one binary reply
 
 Sample: `CORE_READ WRAM;$100;10;512;10` reads 10 bytes from 0x100 and 10 bytes from 0x200 of WRAM. The reply will be 20 bytes long.
 
-### CORE_WRITE `<memory name>` [`<offset>` [`<size>` [`<offset2>` `<size2>` ....]]]
+### bCORE_WRITE `<memory name>` [`<offset>` [`<size>` [`<offset2>` `<size2>` ....]]]
 
 Write one or more ranges to a memory. The command is followed by binary message.
 

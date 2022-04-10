@@ -63,6 +63,8 @@ Commands are all upper case ASCII. Multiple words are separated by `_`.
 For `LOAD` and `SAVE` the namespace is appended (e.g. `LOAD_GAME`).\
 For other commands the namespace is prepended (e.g. `GAME_INFO`).
 
+A command requiering binary data must be prefixed with a `b` lowercase, see later.
+
 ### Command Arguments
 
 If arguments are given, The command and the first argument are separated by a single space.
@@ -85,9 +87,7 @@ A binary message follows this format:
 `size` is encoded in network byte order (big endian).
 If a size is given in the command (e.g. for multi-write) the sizes should match.
 
-There can only be 0 or 1 binary transfers per command.\
-An unexpected binary transfer is to be ignored by the emulator so that it will correctly receive and discard it
-without breaking the stream.
+There can only be 0 or 1 binary transfers per command.
 
 ## Emulator Reply
 
