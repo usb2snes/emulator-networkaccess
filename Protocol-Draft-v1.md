@@ -1,5 +1,7 @@
 # Network Access emulator protocol
 
+THIS DOCUMENT IS OBSOLETE, Please refer to 1.0 preview or later
+
 ## General
 
 <blabla> the main purpose of this protocol is to have an unified way to access different component of an emulator and also be able to control.

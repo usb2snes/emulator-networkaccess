@@ -1,4 +1,8 @@
+
 # Emulator NetworkAccess protocol
+
+THIS DOCUMENT IS OBSOLETE, Please refer to 1.0 preview or later
+
 
 The purpose of this protocol is to have a uniform way to communicate with emulators.
 

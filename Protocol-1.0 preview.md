@@ -1,16 +1,14 @@
 # Emulator NetworkAccess protocol
 
-THIS DOCUMENT IS OBSOLETE, Please refer to 1.0 preview or later
-
-
-
-
 The purpose of this protocol is to have a uniform way to communicate with emulators.
 
 See [README.md](README.md) for more general information. This file mostly describes
 the protocol itself.
 
-This is a draft. Feedback is welcome.
+## 1.0 Preview
+
+This is a preview of the 1.0 version of the protocol. The core mechanisms are here, but it's missing signals
+handling and some commands.
 
 
 ## Primary functions
@@ -37,9 +35,9 @@ the emulation is more general.
 
 ### Disambiguation
 
-Emulator: Refers to the whole program, e.g. Snes9x or RetroArch
-Core: The piece of code that handles the plaform emulation, e.g. Bsnes-core
-Emulation: The process of executing the core and thus emulating the platform/game
+- Emulator: Refers to the whole program, e.g. Snes9x or RetroArch
+- Core: The piece of code that handles the plaform emulation, e.g. Bsnes-core
+- Emulation: The process of executing the core and thus emulating the platform/game
 
 
 ## TCP Port
@@ -47,10 +45,12 @@ Emulation: The process of executing the core and thus emulating the platform/gam
 The protocol is built on top of TCP.
 
 An emulator implementing this protocol must listen on port 65400, and if already in use increment by 1.
+This exists to support multiple emulators running on the same system.
 
 ## Client request
 
-A client will mostly communicate with basic commands and the emulator will reply according to the command. The general command syntax is as follow:
+A client communicates mostly with basic commands and the emulator will reply according to the command.
+The general command syntax is as follow:
 
 ```
 KEYWORD [ <arguments separated by ';'>]\n
@@ -84,7 +84,7 @@ A binary message follows this format:
 `size` is encoded in network byte order (big endian).
 If a size is given in the command (e.g. for multi-write) the sizes should match.
 
-There can only be 0 or 1 binary transfers per command.\
+There can only be 0 or 1 binary transfer per command.\
 An unexpected binary transfer is to be ignored by the emulator so that it will correctly receive and discard it
 without breaking the stream.
 
@@ -216,7 +216,9 @@ user_defined...
 
 The id is needed to identify the emulator since users can start multiples instances of the same emulator on the same system.
 
-The `commands` field allow the client to know what is supported by the emulator.
+The `commands` field allows the client to know what is supported by the emulator.
+
+`nwa_version` is a version string representing the version of the protocol implemented following a simple Major.Minor format, eg `"1.0"` 
 
 
 ### EMULATION_STATUS
@@ -298,7 +300,7 @@ Get information about the available memory of the loaded core.
 
 `name` is defined per platform, see [platforms/](platform documentation).\
 `access` is one of `rw`,`r`,`w` for read/write, read-only, write-only.\
-`size` is optional.
+`size` is mandatory.
 
 Example:
 ```
@@ -312,6 +314,8 @@ size:2048
 
 Be careful that these value can be changed between 2 games for the same core. For example SNES games
 have differents SRAM size.
+
+A size of 0 can mean the memory is currently unavailable, like if no game is loaded the rom size is likely 0.
 
 ### CORE_READ `<memory_name>` [`<offset>` [`<size>` [`<offset2>` `<size2>` ....]]]
 
@@ -328,7 +332,7 @@ Offsets/addresses that start with $ are hexadecimal, otherwise they are decimal.
 
 Note : for a multiread you still receive only one binary reply
 
-Sample: `CORE_READ WRAM;$100;10;512;$a` reads 10 bytes from 0x100 and 10 bytes from 0x200 of WRAM. The reply will be 20 bytes long.
+Sample: `CORE_READ WRAM;$100;10;512;10` reads 10 bytes from 0x100 and 10 bytes from 0x200 of WRAM. The reply will be 20 bytes long.
 
 ### CORE_WRITE `<memory name>` [`<offset>` [`<size>` [`<offset2>` `<size2>` ....]]]
 
@@ -342,7 +346,7 @@ Offsets/addresses that start with $ are hexadecimal otherwise they are decimal.
 * If size is shorter than binary data: reply error
 * If size is longer than binary data: reply error
 
-Sample: `CORE_WRITE WRAM;$100;10;512;$a` `<20 byte binary block>` writes 10 bytes to 0x100 and 10 bytes to 0x200 of WRAM.
+Sample: `CORE_WRITE WRAM;$100;10;512;10` `<20 byte binary block>` writes 10 bytes to 0x100 and 10 bytes to 0x200 of WRAM.
 
 ### DEBUG_BREAK
 
