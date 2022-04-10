@@ -37,9 +37,9 @@ the emulation is more general.
 
 ### Disambiguation
 
-Emulator: Refers to the whole program, e.g. Snes9x or RetroArch
-Core: The piece of code that handles the plaform emulation, e.g. Bsnes-core
-Emulation: The process of executing the core and thus emulating the platform/game
+* Emulator: Refers to the whole program, e.g. Snes9x or RetroArch
+* Core: The piece of code that handles the plaform emulation, e.g. Bsnes-core
+* Emulation: The process of executing the core and thus emulating the platform/game
 
 
 ## TCP Port
@@ -76,6 +76,7 @@ with `$` prefix. So `256` is the same as `$100`.
 ### Binary Transfer to Emulator
 
 Some commands will require the transfer of binary data after sending a command.
+The command name must have a lower case 'b' prefix to indicate it expects a binary block.
 A binary message follows this format:
 
 ```
@@ -179,6 +180,17 @@ The smallest succes you can receive from a command is simply an empty reply
 \n
 ```
 
+## Handling errors
+
+There are 2 mains type of error. 
+
+-A protocol error is an error in the way message are transmited, etheir is an invalid message, 
+eg something not starting with an ascii caracter or a '0' byte or sending something not expected.
+
+-A application level error is specific to a command or what the emulator does not allow, 
+eg 'MY_NAME_IS' without an argument is an 'invalid_argument' error.
+
+When a protocol error is encountered, a 'protocol_error' should be sent, the connection is broken and can be closed.
 
 ## Mandatory commands
 
