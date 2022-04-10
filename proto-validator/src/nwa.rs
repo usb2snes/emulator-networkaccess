@@ -119,15 +119,22 @@ impl NWASyncClient {
         }
         if first_byte == 0 {
             let mut header = vec![0;4];
-            read_stream.read(&mut header)?;
+            let r_size = read_stream.read(&mut header)?;
+            println!("");
+            //println!("Reading {:}", r_size);
             //println!("Header : {:?}", header);
+            let header = header;
             let mut size : u32 = 0;
             size = (header[0] as u32) << 24;
             size += (header[1] as u32) << 16;
             size += (header[2] as u32) << 8;
             size += header[3] as u32;
-            let mut data : Vec<u8> = vec![0; size as usize];
+            //println!("Size : {:}", size);
+            let msize = size as usize;
+            let mut data : Vec<u8> = vec![0; msize];
+            //println!("Size : {:}", size);
             read_stream.read(&mut data)?;
+            //println!("Size : {:}", size);
             return Ok(EmulatorReply::Binary(data));
         }
         Err(std::io::Error::new(std::io::ErrorKind::Other, "Invalid reply"))

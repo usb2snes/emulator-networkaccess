@@ -1,6 +1,7 @@
 
 mod nwa;
 mod nwachecker;
+use std::convert::TryInto;
 use std::process::exit;
 use std::net::{ToSocketAddrs};
 use crate::nwa::nwa::*;
@@ -44,11 +45,12 @@ fn main() {
             let copy = cmd.unwrap().clone();
             available_commands = copy.split(',').map(str::to_string).collect::<Vec<String>>().to_owned();
             println!("\tChecking for mandatory commands");
-            expect_true(available_commands.contains(&String::from("EMULATOR_INFO")), "\tChecking for mandatory command EMULATOR_INFO : ");
-            expect_true(available_commands.contains(&String::from("EMULATION_STATUS")), "\tChecking for mandatory command EMULATION_STATUS : ");
-            expect_true(available_commands.contains(&String::from("CORES_LIST")), "\tChecking for mandatory command CORES_LIST : ");
-            expect_true(available_commands.contains(&String::from("CORE_INFO")), "\tChecking for mandatory command CORE_INFO : ");
-            expect_true(available_commands.contains(&String::from("CORE_CURRENT_INFO")), "\tChecking for mandatory command CORE_CURRENT_INFO : ");
+            checker.current_check_add_subcheck("Mandatory command EMULATOR_INFO", "Plop", available_commands.contains(&String::from("EMULATOR_INFO")));
+            checker.current_check_add_subcheck("Mandatory command EMULATION_STATUS", "Plop", available_commands.contains(&String::from("EMULATION_STATUS")));
+            checker.current_check_add_subcheck("Mandatory command CORES_LIST", "Plop", available_commands.contains(&String::from("CORES_LIST")));
+            checker.current_check_add_subcheck("Mandatory command CORE_INFO", "Plop", available_commands.contains(&String::from("CORE_INFO")));
+            checker.current_check_add_subcheck("Mandatory command CORE_CURRENT_INFO", "Plop", available_commands.contains(&String::from("CORE_CURRENT_INFO")));
+            checker.current_check_add_subcheck("Mandatory command MY_NAME_IS", "Plop", available_commands.contains(&String::from("MY_NAME_IS")));
         }
     }
     checker.new_check("Mandatory CORES_LIST command", "Test if the mandatory CORES_LIST command reply");
@@ -185,7 +187,7 @@ fn main() {
     }  
     if available_commands.contains(&String::from("CORE_MEMORIES")) {
         let mut available_memory_name = String::from("PLACEHOLDER");
-        let mut available_memory_size = 0;
+        let mut available_memory_size : u32 = 0;
         checker.new_check("Checking CORE_MEMORIES command", "Checking if CORE_MEMORIES behave correctly");
         let reply = nwa.execute_command("CORE_MEMORIES", None).expect("Error with socket");
         let cp = &reply;
@@ -202,7 +204,7 @@ fn main() {
                         if map.contains_key("name") && map.contains_key("access") && map.get("access").unwrap().contains("r") {
                             available_memory_name = map.get("name").unwrap().clone();
                             if map.contains_key("size") {
-                                available_memory_size = map.get("size").unwrap().parse::<i32>().unwrap();
+                                available_memory_size = map.get("size").unwrap().parse::<u32>().unwrap();
                             }
                         }
                     },
@@ -215,7 +217,7 @@ fn main() {
                                map.contains_key("name") && map.contains_key("access") && map.get("access").unwrap().contains("r") {
                                 available_memory_name = map.get("name").unwrap().clone();
                                 if map.contains_key("size") {
-                                    available_memory_size = map.get("size").unwrap().parse::<i32>().unwrap();
+                                    available_memory_size = map.get("size").unwrap().parse::<u32>().unwrap();
                                 }
                             }
                         }
@@ -230,6 +232,19 @@ fn main() {
             checker.new_check("Basic CORE_READ", "Reading 5 bytes from one readable memory");
             let reply = nwa.execute_command("CORE_READ", Some(format!("{:};0;5", available_memory_name).as_str())).expect("Error with socket");
             checker.current_check_expect_binary_block(&reply, 5);
+            checker.new_check("Basic CORE_READ, whole memory", "Reading a whole readable memory");
+            let reply = nwa.execute_command("CORE_READ", Some(format!("{:}", available_memory_name).as_str())).expect("Error with socket");
+            checker.current_check_expect_binary_block(&reply, available_memory_size.try_into().unwrap());
+            checker.new_check("Basic CORE_READ, whole memory starting at 20", "Reading whole memory minus 20");
+            let reply = nwa.execute_command("CORE_READ", Some(format!("{:};20", available_memory_name).as_str())).expect("Error with socket");
+            checker.current_check_expect_binary_block(&reply, (available_memory_size - 20).try_into().unwrap());
+            checker.new_check("Basic CORE_READ, multiple offset", "Reading multiple offset of a memory");
+            let reply = nwa.execute_command("CORE_READ", Some(format!("{:};8;5;25;4;30;1", available_memory_name).as_str())).expect("Error with socket");
+            checker.current_check_expect_binary_block(&reply, 10);
+            checker.new_check("Basic CORE_READ, multiple offset without size", "Reading multiple offset but without specify the size of the last one");
+            let reply = nwa.execute_command("CORE_READ", Some(format!("{:};20;2;{:}", available_memory_name, available_memory_size - 2).as_str())).expect("Error with socket");
+            checker.current_check_expect_binary_block(&reply, 4);
+
         }
     }
     checker.repport();

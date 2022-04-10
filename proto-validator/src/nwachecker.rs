@@ -81,6 +81,8 @@ impl NWAChecker {
             EmulatorReply::Binary(data) => {
                 if data.len() == size {
                     current_check.passed = true;
+                } else {
+                    error(format!("The binary block size does not match : expected : {:}  - got : {:}", size, data.len()).as_str());
                 }
             }
             _ => {
@@ -88,7 +90,7 @@ impl NWAChecker {
             }
         }
         if current_check.passed == false {
-            error(format!("Did not receive a correct binary block : {:?}", reply).as_str());
+            error(format!("Did not receive a correct binary block").as_str());
         }
         current_check.passed
     }
