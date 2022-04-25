@@ -142,12 +142,20 @@ impl NWASyncClient {
 
     pub fn execute_command(&mut self, cmd : &str, argString : Option<&str>) -> Result<EmulatorReply, std::io::Error> {
         if argString == None {
-            self.connection.write(format!("{}\n", cmd).as_bytes());    
+            self.connection.write(format!("{}\n", cmd).as_bytes());
         } else {
             self.connection.write(format!("{} {}\n", cmd, argString.unwrap()).as_bytes());
         }
         self.get_reply()
     }
+    pub fn execute_raw_command(&mut self, cmd : &str, argString : Option<&str>) {
+        if argString == None {
+            self.connection.write(format!("{}\n", cmd).as_bytes());
+        } else {
+            self.connection.write(format!("{} {}\n", cmd, argString.unwrap()).as_bytes());
+        }
+    }
+
     pub fn send_data(&mut self, data : Vec<u8>) {
         let mut buf : Vec<u8> = vec![0;5];
         let size =  data.len();

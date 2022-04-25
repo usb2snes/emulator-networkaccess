@@ -201,7 +201,8 @@ fn main() {
                         checker.set_passed(true);
                         checker.current_check_add_key_check(&reply, "name", None);
                         checker.current_check_add_key_check(&reply, "access", None);
-                        if map.contains_key("name") && map.contains_key("access") && map.get("access").unwrap().contains("r") {
+                        checker.current_check_add_key_check(&reply, "size", None);
+                        if map.contains_key("name") && map.contains_key("access") && map.get("access").unwrap().contains("rw") {
                             available_memory_name = map.get("name").unwrap().clone();
                             if map.contains_key("size") {
                                 available_memory_size = map.get("size").unwrap().parse::<u32>().unwrap();
@@ -212,9 +213,10 @@ fn main() {
                         checker.set_passed(true);
                         for map in list_map {
                             checker.current_check_add_key_check(&reply, "name", None);
-                            checker.current_check_add_key_check(&reply, "platform", None);
+                            checker.current_check_add_key_check(&reply, "access", None);
+                            checker.current_check_add_key_check(&reply, "size", None);
                             if available_memory_name == "PLACEHOLDER" && 
-                               map.contains_key("name") && map.contains_key("access") && map.get("access").unwrap().contains("r") {
+                               map.contains_key("name") && map.contains_key("access") && map.get("access").unwrap().contains("rw") {
                                 available_memory_name = map.get("name").unwrap().clone();
                                 if map.contains_key("size") {
                                     available_memory_size = map.get("size").unwrap().parse::<u32>().unwrap();
@@ -229,22 +231,69 @@ fn main() {
         _ => {error(format!("Did not receive an ascii or error reply : {:?}", cp).as_str())}
         }
         if available_memory_name != "PLACEHOLDER" {
+            println!();
+            println!("Found a memory available for read/write: {:}. Testing CORE_READ and bCORE_WRITE.\n\t Note that these tests does not check for data validity", available_memory_name);
+            println!();
             checker.new_check("Basic CORE_READ", "Reading 5 bytes from one readable memory");
             let reply = nwa.execute_command("CORE_READ", Some(format!("{:};0;5", available_memory_name).as_str())).expect("Error with socket");
             checker.current_check_expect_binary_block(&reply, 5);
-            checker.new_check("Basic CORE_READ, whole memory", "Reading a whole readable memory");
+
+            checker.new_check("Basic CORE_READ, using hexa notation", "Reading 5 bytes from one readable memory with hexanotation");
+            let reply = nwa.execute_command("CORE_READ", Some(format!("{:};$0;$5", available_memory_name).as_str())).expect("Error with socket");
+            checker.current_check_expect_binary_block(&reply, 5);
+
+            checker.new_check("CORE_READ, whole memory", "Reading a whole readable memory");
             let reply = nwa.execute_command("CORE_READ", Some(format!("{:}", available_memory_name).as_str())).expect("Error with socket");
             checker.current_check_expect_binary_block(&reply, available_memory_size.try_into().unwrap());
-            checker.new_check("Basic CORE_READ, whole memory starting at 20", "Reading whole memory minus 20");
+
+            checker.new_check("CORE_READ, whole memory starting at 20", "Reading whole memory minus 20");
             let reply = nwa.execute_command("CORE_READ", Some(format!("{:};20", available_memory_name).as_str())).expect("Error with socket");
             checker.current_check_expect_binary_block(&reply, (available_memory_size - 20).try_into().unwrap());
-            checker.new_check("Basic CORE_READ, multiple offset", "Reading multiple offset of a memory");
+
+            checker.new_check("CORE_READ, multiple offset", "Reading multiple offset of a memory, 8;5;25;4;30;1");
             let reply = nwa.execute_command("CORE_READ", Some(format!("{:};8;5;25;4;30;1", available_memory_name).as_str())).expect("Error with socket");
             checker.current_check_expect_binary_block(&reply, 10);
-            checker.new_check("Basic CORE_READ, multiple offset without size", "Reading multiple offset but without specify the size of the last one");
+
+            checker.new_check("CORE_READ, multiple offset without size", "Reading multiple offset but without specify the size of the last one 20;2;size - 2");
             let reply = nwa.execute_command("CORE_READ", Some(format!("{:};20;2;{:}", available_memory_name, available_memory_size - 2).as_str())).expect("Error with socket");
             checker.current_check_expect_binary_block(&reply, 4);
 
+
+            checker.new_check("Basic bCORE_WRITE", "Write to the first 5 bytes of the available memory");
+            nwa.execute_raw_command("bCORE_WRITE", Some(format!("{:};0;5", available_memory_name).as_str()));
+            let buf : Vec<u8> = vec![0;5];
+            nwa.send_data(buf);
+            let reply = nwa.get_reply().expect("Error with socket");
+            checker.current_check_expect_ascii_ok(&reply);
+
+            checker.new_check("Basic bCORE_WRITE with hexa notation", "Write to the first 5 bytes of the available memory with $ notation");
+            nwa.execute_raw_command("bCORE_WRITE", Some(format!("{:};$0;$5", available_memory_name).as_str()));
+            let buf : Vec<u8> = vec![0;5];
+            nwa.send_data(buf);
+            let reply = nwa.get_reply().expect("Error with socket");
+            checker.current_check_expect_ascii_ok(&reply);
+ 
+
+            checker.new_check("bCORE_WRITE whole memory", "Write to the whole available memory");
+            nwa.execute_raw_command("bCORE_WRITE", Some(format!("{:}", available_memory_name).as_str()));
+            let buf : Vec<u8> = vec![0;available_memory_size.try_into().unwrap()];
+            nwa.send_data(buf);
+            let reply = nwa.get_reply().expect("Error with socket");
+            checker.current_check_expect_ascii_ok(&reply);
+
+            checker.new_check("bCORE_WRITE multiple offset", "Writing to multiple location 8;5;25;4;30;1");
+            nwa.execute_raw_command("bCORE_WRITE", Some(format!("{:};8;5;25;4;30;1", available_memory_name).as_str()));
+            let buf : Vec<u8> = vec![0;10];
+            nwa.send_data(buf);
+            let reply = nwa.get_reply().expect("Error with socket");
+            checker.current_check_expect_ascii_ok(&reply);
+
+            checker.new_check("bCORE_WRITE multiple offset without ending size", "Writing to multiple location 20;2;size-2");
+            nwa.execute_raw_command("bCORE_WRITE", Some(format!("{:};20;2;{:}", available_memory_name, available_memory_size - 2).as_str()));
+            let buf : Vec<u8> = vec![0;4];
+            nwa.send_data(buf);
+            let reply = nwa.get_reply().expect("Error with socket");
+            checker.current_check_expect_ascii_ok(&reply);
         }
     }
     checker.repport();
