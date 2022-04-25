@@ -142,9 +142,9 @@ impl NWASyncClient {
 
     pub fn execute_command(&mut self, cmd : &str, argString : Option<&str>) -> Result<EmulatorReply, std::io::Error> {
         if argString == None {
-            self.connection.write(format!("{}\n", cmd).as_bytes());
+            self.connection.write(format!("{}\n", cmd).as_bytes())?;
         } else {
-            self.connection.write(format!("{} {}\n", cmd, argString.unwrap()).as_bytes());
+            self.connection.write(format!("{} {}\n", cmd, argString.unwrap()).as_bytes())?;
         }
         self.get_reply()
     }
