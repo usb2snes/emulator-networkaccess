@@ -173,7 +173,7 @@ Error type are as follow :
 
 Any ascii reply that does not contain an `error` key is a success.
 
-The smallest succes you can receive from a command is simply an empty reply
+The smallest success you can receive from a command is simply an empty reply
 
 ```
 \n
