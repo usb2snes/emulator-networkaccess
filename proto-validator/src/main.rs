@@ -150,7 +150,7 @@ fn main() {
     checker.new_check("Checking Mandatory MY_NAME_IS command", "Test the MY_NAME_IS command, check if it returns the id");
     let reply = nwa.execute_command("MY_NAME_IS", Some("NWA validator")).expect("Error with socket");
     checker.current_check_expect_ascii_hash(&reply);
-    checker.current_check_add_key_check(&reply, "name", Some("NWA validator"));
+    checker.current_check_add_key_check(&reply, "name", None);
     checker.new_check("Unexpected binary block", 
     "Test how the emulator react when giving a binary block when expecting a command, we expect a protocol error and a closed connection");
     let mut data : Vec<u8> = vec![0;3];
@@ -256,7 +256,7 @@ fn main() {
 
             checker.new_check("CORE_READ, multiple offset without size", "Reading multiple offset but without specify the size of the last one 20;2;size - 2");
             let reply = nwa.execute_command("CORE_READ", Some(format!("{:};20;2;{:}", available_memory_name, available_memory_size - 2).as_str())).expect("Error with socket");
-            checker.current_check_expect_binary_block(&reply, 4);
+            checker.current_check_expect_error(&reply, ErrorKind::InvalidArgument);
 
 
             checker.new_check("Basic bCORE_WRITE", "Write to the first 5 bytes of the available memory");
@@ -293,7 +293,7 @@ fn main() {
             let buf : Vec<u8> = vec![0;4];
             nwa.send_data(buf);
             let reply = nwa.get_reply().expect("Error with socket");
-            checker.current_check_expect_ascii_ok(&reply);
+            checker.current_check_expect_error(&reply, ErrorKind::InvalidArgument);
         }
     }
     checker.repport();

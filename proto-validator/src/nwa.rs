@@ -57,7 +57,7 @@ impl NWASyncClient {
         let mut read_stream = BufReader::new(self.connection.try_clone().unwrap());
         let mut first_byte =[0 as u8; 1];
         if read_stream.read(&mut first_byte)? == 0 {
-            return Err(std::io::Error::new(std::io::ErrorKind::Other, "Read 0 byte"))
+            return Err(std::io::Error::new(std::io::ErrorKind::ConnectionAborted, "Read 0 byte"))
         }
         let first_byte = first_byte[0];
         
