@@ -23,7 +23,7 @@ typedef enum  {
     LOAD_CORE,
     CORE_MEMORIES,
     CORE_READ,
-    CORE_WRITE,
+    bCORE_WRITE,
 
     DEBUG_BREAK,
     DEBUG_CONTINUE,
@@ -56,7 +56,7 @@ const emulator_network_access_command_string_entry emulator_network_access_comma
     EMU_NWA_COMMAND_STRING(LOAD_CORE),
     EMU_NWA_COMMAND_STRING(CORE_MEMORIES),
     EMU_NWA_COMMAND_STRING(CORE_READ),
-    EMU_NWA_COMMAND_STRING(CORE_WRITE),
+    EMU_NWA_COMMAND_STRING(bCORE_WRITE),
     EMU_NWA_COMMAND_STRING(DEBUG_BREAK),
     EMU_NWA_COMMAND_STRING(DEBUG_CONTINUE),
     EMU_NWA_COMMAND_STRING(LOAD_STATE),
@@ -67,4 +67,28 @@ const unsigned int emulator_network_access_number_of_command = sizeof(emulator_n
 
 #undef EMU_NWA_COMMAND_STRING
 
+typedef enum {
+    protocol_error,
+    invalid_command,
+    invalid_argument,
+    command_error,
+    not_allowed
+} emulator_network_access_error_type;
+
+typedef struct {
+    emulator_network_access_error_type error_type;
+    const char* string;
+} emulator_network_access_error_type_string_entry;
+
+#define EMU_NWA_ERROR_STRING(cmd) {cmd, #cmd}
+
+const emulator_network_access_error_type_string_entry emulator_network_access_error_type_strings[] = {
+    EMU_NWA_ERROR_STRING(protocol_error),
+    EMU_NWA_ERROR_STRING(invalid_command),
+    EMU_NWA_ERROR_STRING(invalid_argument),
+    EMU_NWA_ERROR_STRING(command_error),
+    EMU_NWA_ERROR_STRING(not_allowed)
+};
+
+#undef EMU_NWA_ERROR_STRING
 #endif

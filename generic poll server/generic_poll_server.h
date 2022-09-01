@@ -4,11 +4,28 @@
 #include <stdbool.h>
 #include "emulator_network_access_defines.h"
 
+
+/*
+The function doing the command must returns this :
+    0 for regular command
+    > 0 for binary command, that corresponds to the expected size
+    < 0 for binary command if there is an error, this is the expected size
+                           this is needed so the code can properly swallow
+                           the next binary block
+*/
+
 typedef struct
 {
     emulator_network_access_command command;
-    bool(*function)(SOCKET, char**, int);
+    int64_t(*function)(SOCKET, char**, int);
 } generic_emu_nwa_command_entry;
+
+typedef struct generic_poll_server_memory_argument_struct
+{
+    unsigned int offset;
+    unsigned int size;
+    struct generic_poll_server_memory_argument_struct* next;
+} generic_poll_server_memory_argument;
 
 typedef generic_emu_nwa_command_entry generic_emu_nwa_commands_map_t[];
 
@@ -26,6 +43,14 @@ typedef enum
     AFTER_POLL
 }  generic_poll_server_callback;
 
+typedef enum
+{
+    WAITING_FOR_COMMAND,
+    GETTING_COMMAND,
+    EXPECTING_BINARY_DATA,
+    GETTING_BINARY_DATA
+} generic_poll_server_client_state;
+
 typedef struct {
     bool(*add_client)(SOCKET socket);
     bool(*remove_client)(SOCKET socket);
@@ -36,21 +61,23 @@ typedef struct {
 typedef struct {
     SOCKET  socket_fd;
     char    readed_data[2048];
-    char    pending_data[2048];
+    char    command_data[2048];
     int     readed_size;
-    int     pending_size;
-    int     pending_pos;
+    int     command_data_size;
+    int     command_data_pos;
+    bool    shallow_binary_block;
 
-    bool    in_cmd;
+    generic_poll_server_client_state state;
 
     emulator_network_access_command         current_command;
 
-    char                write_binary_header[5];
-    char                write_binary_header_size;
-    unsigned int        write_expected_size;
-    unsigned int        write_handled_size;
-
-
+    char                binary_header[5];
+    char                binary_header_size;
+    char*               binary_block;
+    unsigned int        binary_block_defined_size; // The size defined by the header
+    unsigned int        binary_block_size; // The current size filled into the buffer
+    
+    unsigned int        expected_block_size;
 } generic_poll_server_client;
 
 
@@ -66,7 +93,9 @@ void            generic_poll_server_send_hash_reply(SOCKET socket, int key_count
 void            generic_poll_server_send_full_hash_reply(SOCKET socket, int key_count, ...);
 void            generic_poll_server_end_hash_reply(SOCKET socket);
 void            generic_poll_server_start_hash_reply(SOCKET socket);
+void            generic_poll_server_send_binary_block(SOCKET socket, uint32_t size, const char* data);
 size_t          generic_poll_server_get_offset(const char *offset_str);
-
+generic_poll_server_memory_argument*    generic_poll_server_parse_memory_argument(const char** ag, int act);
+void            generic_poll_server_free_memory_argument(generic_poll_server_memory_argument* tofree);
 
 #endif
