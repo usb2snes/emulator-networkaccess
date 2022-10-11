@@ -262,7 +262,7 @@ static bool	add_to_clients(SOCKET client_fd)
             clients[i].binary_block_size = 0;
             clients[i].binary_block = NULL;
             clients[i].binary_header_size = 0;
-            clients[i].shallow_binary_block;
+            clients[i].shallow_binary_block = false;
             return true;
         }
     }
@@ -577,20 +577,32 @@ static bool generic_poll_server_start(int poll_timeout)
         print_socket_error("Error creating the server socket\n");
         return false;
     }
+#ifdef __WIN32__
     DWORD no = 0; // Probably not very unix like
     int set_result = setsockopt(server_socket, IPPROTO_IPV6, IPV6_V6ONLY, (char *) &no, sizeof(no));
     if (set_result == SOCKET_ERROR)
+#else
+    int no = 0;
+    int set_result = setsockopt(server_socket, IPPROTO_IPV6, IPV6_V6ONLY, (void*)&no, sizeof(no));
+    if (set_result == -1)
+#endif
     {
         print_socket_error("Error setting socket to not ipv6 only\n");
         return false;
     }
 
+#if __STDC__ > 201112L
 	size_t required_size;
 	getenv_s(&required_size, NULL, 0, "NWA_PORT_RANGE");
 	if (required_size != 0)
 	{
 		char* buffer = (char*) malloc(required_size);
 		getenv_s(&required_size, buffer, required_size, "NWA_PORT_RANGE");
+#else
+    char* buffer = getenv("NWA_PORT_RANGE");
+    if (buffer != NULL)
+    {
+#endif
 		unsigned short env_port = atoi(buffer);
 		if (env_port != 0)
 			port_range_start = env_port;
@@ -598,6 +610,9 @@ static bool generic_poll_server_start(int poll_timeout)
 		{
 			fprintf(stderr, "Trying to read the port range from NWA_PORT_RANGE variable but not a valid port : %s\n", buffer);
 		}
+		#if __STDC__ > 201112L
+		free(buffer);
+        #endif
 	}
 
     memset(&name, 0, sizeof(name));
@@ -676,7 +691,7 @@ static bool generic_poll_server_start(int poll_timeout)
             {
                 unsigned long piko = 1;
                 ioctlsocket(new_socket, FIONBIO, &piko);
-                int addrlen = sizeof(new_client);
+                socklen_t addrlen = sizeof(new_client);
                 getpeername(new_socket, (struct sockaddr *)&new_client, &addrlen);
                 char str[INET6_ADDRSTRLEN];
                 if (inet_ntop(AF_INET6, &new_client.sin6_addr, str, sizeof(str))) {
