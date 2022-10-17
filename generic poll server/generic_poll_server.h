@@ -61,20 +61,20 @@ typedef struct {
 } generic_poll_server_callbacks;
 
 typedef struct {
-    SOCKET  socket_fd;
-    char    readed_data[2048];
-    char    command_data[2048];
-    int     readed_size;
-    int     command_data_size;
-    int     command_data_pos;
-    bool    shallow_binary_block;
+    SOCKET          socket_fd;
+    char            readed_data[2048];
+    char            command_data[2048];
+    unsigned int    readed_size;
+    unsigned int    command_data_size;
+    int             command_data_pos;
+    bool            shallow_binary_block;
 
     generic_poll_server_client_state state;
 
     emulator_network_access_command         current_command;
 
     char                binary_header[5];
-    char                binary_header_size;
+    unsigned char       binary_header_size;
     char*               binary_block;
     unsigned int        binary_block_defined_size; // The size defined by the header
     unsigned int        binary_block_size; // The current size filled into the buffer
@@ -97,7 +97,7 @@ void            generic_poll_server_end_hash_reply(SOCKET socket);
 void            generic_poll_server_start_hash_reply(SOCKET socket);
 void            generic_poll_server_send_binary_block(SOCKET socket, uint32_t size, const char* data);
 size_t          generic_poll_server_get_offset(const char *offset_str);
-generic_poll_server_memory_argument*    generic_poll_server_parse_memory_argument(const char** ag, int act);
+generic_poll_server_memory_argument*    generic_poll_server_parse_memory_argument(const char** ag, unsigned int ac);
 void            generic_poll_server_free_memory_argument(generic_poll_server_memory_argument* tofree);
 
 #endif

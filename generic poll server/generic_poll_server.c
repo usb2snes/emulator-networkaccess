@@ -78,7 +78,7 @@ static void print_socket_error(const char* msg)
 
 #include "generic_poll_server.h"
 
-static void __send_hash_reply(SOCKET socket, bool end, int key_count, va_list list)
+static void __send_hash_reply(SOCKET socket, bool end, unsigned int key_count, va_list list)
 {
     for (unsigned int i = 0; i < key_count; i++)
     {
@@ -146,7 +146,7 @@ size_t          generic_poll_server_get_offset(const char *offset_str)
     return atoll(offset_str);
 }
 
-generic_poll_server_memory_argument*    generic_poll_server_parse_memory_argument(char** ag, int ac)
+generic_poll_server_memory_argument*    generic_poll_server_parse_memory_argument(char** ag, unsigned int ac)
 {
     generic_poll_server_memory_argument* toret = (generic_poll_server_memory_argument*) malloc(sizeof(generic_poll_server_memory_argument));
     toret->next = NULL;
@@ -323,7 +323,7 @@ static void process_binary_block(generic_poll_server_client* client)
 {
     if (client->current_command == bCORE_WRITE)
     {
-        bool result = generic_poll_server_write_function(client->socket_fd, client->binary_block, client->binary_block_size);
+        generic_poll_server_write_function(client->socket_fd, client->binary_block, client->binary_block_size);
         free(client->binary_block);
         client->binary_block = NULL;
         client->binary_block_size = 0;
@@ -531,7 +531,7 @@ static bool read_client_data(SOCKET fd)
     s_debug("Readed %d data on %d\n", read_size, fd);
     if (read_size <= 0)
         return false;
-    client->readed_size = read_size;
+    client->readed_size = (unsigned int) read_size;
     memcpy(client->readed_data, buff, read_size);
     if (preprocess_data(client) == false)
     {
