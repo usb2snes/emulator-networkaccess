@@ -146,7 +146,7 @@ size_t          generic_poll_server_get_offset(const char *offset_str)
     return atoll(offset_str);
 }
 
-generic_poll_server_memory_argument*    generic_poll_server_parse_memory_argument(char** ag, unsigned int ac)
+generic_poll_server_memory_argument*    generic_poll_server_parse_memory_argument(const char** ag, unsigned int ac)
 {
     generic_poll_server_memory_argument* toret = (generic_poll_server_memory_argument*) malloc(sizeof(generic_poll_server_memory_argument));
     toret->next = NULL;
@@ -192,7 +192,7 @@ static generic_poll_server_client clients[5];
 static generic_poll_server_callbacks callbacks = {NULL, NULL, NULL, NULL};
 
 
-void generic_poll_server_add_callback(generic_poll_server_callback cb, void* fntptr)
+void generic_poll_server_add_callback(generic_poll_server_callback cb, void (*fntptr)(void))
 {
     switch (cb)
     {

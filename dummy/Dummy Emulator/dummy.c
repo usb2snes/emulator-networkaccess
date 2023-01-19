@@ -32,7 +32,7 @@ const generic_emu_nwa_commands_map_t generic_emu_mwa_map = {
     {LOAD_CORE, dummy_core_load},
     {CORE_MEMORIES, dummy_core_memories},
     {CORE_READ, dummy_core_memory_read},
-    {CORE_WRITE, dummy_core_memory_write},
+    {bCORE_WRITE, dummy_core_memory_write},
     {DEBUG_BREAK, dummy_np},
     {DEBUG_CONTINUE, dummy_np},
     {LOAD_STATE, dummy_load_state},
@@ -161,8 +161,8 @@ int	main(int argc, char *argv[]) {
     prep_memory(rom_path, state_path);
     printf("Starting Dummy Server: %s %s\n",
         rom_path, state_path);
-    generic_poll_server_add_callback(SERVER_STARTED, server_started);
-    bool ret = generic_poll_server_start();
+    generic_poll_server_add_callback(SERVER_STARTED, (void*)(&server_started));
+    bool ret = generic_poll_server_start(100);
     printf("Return : %d\n", ret);
 }
 
@@ -171,7 +171,7 @@ static void write_to_socket(SOCKET socket, const char* str)
     write(socket, str, strlen(str));
 }
 
-bool dummy_emu_info(SOCKET socket, char ** args, int ac)
+int64_t dummy_emu_info(SOCKET socket, char ** args, int ac)
 {
     send_full_hash_reply(socket, 5, 
                             "name", "Dummy emulator",
@@ -179,10 +179,10 @@ bool dummy_emu_info(SOCKET socket, char ** args, int ac)
                             "id", "I am dumb",
                             "nwa_version", "1.0",
                             "commands", "EMULATOR_INFO,EMULATION_STATUS,GAME_INFO,CORES_LIST,CORE_CURRENT_INFO,CORE_INFO,EMULATION_PAUSE,EMULATION_RESUME,EMULATION_RESET,EMULATION_STOP");
-    return true;
+    return 0;
 }
 
-bool dummy_emu_status(SOCKET socket, char ** args, int ac)
+int64_t dummy_emu_status(SOCKET socket, char ** args, int ac)
 {
     write_to_socket(socket, "\n");
     if (dummy_state == RUNNING)
@@ -192,84 +192,84 @@ bool dummy_emu_status(SOCKET socket, char ** args, int ac)
     if (dummy_state == STOPPED)
         write_to_socket(socket, "state:stopped");
     write_to_socket(socket, "\ngame:Dummy game\n\n");
-    return true;
+    return 0;
 }
 
-bool dummy_emu_pause(SOCKET socket, char ** args, int ac)
+int64_t dummy_emu_pause(SOCKET socket, char ** args, int ac)
 {
     dummy_state = PAUSED;
-    return true;
+    return 0;
 }
 
-bool dummy_emu_stop(SOCKET socket, char ** args, int ac)
+int64_t dummy_emu_stop(SOCKET socket, char ** args, int ac)
 {
     dummy_state = STOPPED;
-    return true;
+    return 0;
 }
 
-bool dummy_emu_reset(SOCKET socket, char ** args, int ac)
+int64_t dummy_emu_reset(SOCKET socket, char ** args, int ac)
 {
-    return false;
+    return 0;
 }
 
-bool dummy_emu_resume(SOCKET socket, char ** args, int ac)
+int64_t dummy_emu_resume(SOCKET socket, char ** args, int ac)
 {
     dummy_state = RUNNING;
-    return true;
+    return 0;
 }
 
-bool dummy_emu_reload(SOCKET socket, char ** args, int ac)
+int64_t dummy_emu_reload(SOCKET socket, char ** args, int ac)
 {
-    return false;
+    return 0;
 }
 
-bool dummy_load_game(SOCKET socket, char ** args, int ac)
+int64_t dummy_load_game(SOCKET socket, char ** args, int ac)
 {
-    return false;
+    return 0;
 }
 
-bool dummy_game_info(SOCKET socket, char ** args, int ac)
+int64_t dummy_game_info(SOCKET socket, char ** args, int ac)
 {
     send_full_hash_reply(socket, 3, "name", "Dummy Game",
                         "file", rom_path,
                         "region", "EU");
-    return true;
+    return 0;
 }
 
-bool dummy_cores_list(SOCKET socket, char ** args, int ac)
+int64_t dummy_cores_list(SOCKET socket, char ** args, int ac)
 {
     send_full_hash_reply(socket, 3, "platform", "SNES", 
                                     "name", "dummy core", 
                                     "version", "0.1"
     );
-    return true;
+    return 0;
 }
 
-bool dummy_core_info(SOCKET socket, char ** args, int ac)
+int64_t dummy_core_info(SOCKET socket, char ** args, int ac)
 {
     return dummy_cores_list(socket, args, ac);
 }
 
-bool dummy_core_current_info(SOCKET socket, char ** args, int ac)
+int64_t dummy_core_current_info(SOCKET socket, char ** args, int ac)
 {
     return dummy_cores_list(socket, args, ac);
 }
 
-bool dummy_core_load(SOCKET socket, char ** args, int ac)
+int64_t dummy_core_load(SOCKET socket, char ** args, int ac)
 {
-    return false;
+    return 0;
 }
 
-bool dummy_core_memories(SOCKET socket, char ** args, int ac)
+int64_t dummy_core_memories(SOCKET socket, char ** args, int ac)
 {
     send_full_hash_reply(socket, 6, "name", "WRAM", "access", "rw",
                                     "name", "SRAM", "access", "rw",
                                     "name", "CARTROM", "access", "rw"
     );
-    return true;
+    return 0;
 }
 
-bool dummy_core_memory_read(SOCKET socket, char ** args, int ac)
+int64_t dummy_core_memory_read(SOCKET socket, char ** args, int ac)
 {
     char* ptr = NULL;
     size_t offset = generic_poll_server_get_offset(args[1]);
@@ -286,7 +286,7 @@ bool dummy_core_memory_read(SOCKET socket, char ** args, int ac)
     write(socket, (const char*) &network_size, 4);
     s_debug("Sending : %s\n", hexString(ptr + offset, size));
     write(socket, ptr + offset, size);
-    return true;
+    return 0;
 }
 
 // This should probably be in a client specific struct
@@ -314,7 +314,7 @@ bool    write_to_memory(SOCKET socket, char* data, uint32_t size)
         size_header_get = true;
     }
     if (size == 0)
-        return false;
+        return 0;
     memcpy(memory_to_write + offset_to_write, data, size);
     size_written += size;
     s_debug("Writing to memory : %d - %d/%d\n", size, size_written, size_to_write);
@@ -327,15 +327,15 @@ bool    write_to_memory(SOCKET socket, char* data, uint32_t size)
         memory_to_write = NULL;
         size_header_get = false;
         write(socket, "\n\n", 2);
-        return true;
+        return 0;
     }
-    return false;
+    return 0;
 }
 
 
 // This does not handle all weird case sliver like
 
-bool dummy_core_memory_write(SOCKET socket, char ** args, int ac)
+int64_t dummy_core_memory_write(SOCKET socket, char ** args, int ac)
 {
     s_debug("ARgs : %s\n", args[0]);
     if (strcmp(args[0], "WRAM") == 0)
@@ -352,20 +352,20 @@ bool dummy_core_memory_write(SOCKET socket, char ** args, int ac)
     if (ac == 3)
         size_to_write = atoi(args[2]);
     size_written = 0;
-    return true;
+    return size_to_write;
 }
 
-bool dummy_np(SOCKET socket, char ** args, int ac)
+int64_t dummy_np(SOCKET socket, char ** args, int ac)
 {
-    return false;
+    return 0;
 }
 
-bool dummy_load_state(SOCKET socket, char ** args, int ac)
+int64_t dummy_load_state(SOCKET socket, char ** args, int ac)
 {
-    return false;
+    return 0;
 }
 
-bool dummy_save_state(SOCKET socket, char ** args, int ac)
+int64_t dummy_save_state(SOCKET socket, char ** args, int ac)
 {
-    return false;
+    return 0;
 }
