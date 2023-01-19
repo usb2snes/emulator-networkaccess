@@ -34,6 +34,7 @@ typedef LPWSAPOLLFD poll_fd_t;
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <time.h>
+#include <ctype.h>
 #include <sys/ioctl.h>
 #define ioctlsocket ioctl
 #endif
@@ -390,7 +391,7 @@ static void process_command(generic_poll_server_client* client)
     int64_t expected_size = execute_command(client, cmd, args, nb_arg);
     if (client->state == EXPECTING_BINARY_DATA)
     {
-        s_debug("binary command : %d\n", expected_size);
+        s_debug("binary command : %jd\n", expected_size);
         if (expected_size < 0) {
             client->shallow_binary_block = true;
             expected_size = expected_size * -1;

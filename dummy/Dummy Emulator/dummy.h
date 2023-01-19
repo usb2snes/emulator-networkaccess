@@ -3,11 +3,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#ifdef _WIN32
-#include <winsock2.h>
-#else
-typedef int SOCKET;
-#endif
+#include "generic_poll_server.h"
 
 
 int64_t	dummy_emu_info(SOCKET socket, char **args, int ac);

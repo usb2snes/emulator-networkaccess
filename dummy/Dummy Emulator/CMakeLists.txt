@@ -10,6 +10,11 @@ add_executable (dummyemulator dummy.c)
 
 set_property(TARGET dummyemulator PROPERTY C_STANDARD 99)
 
+if(MSVC)
+  target_compile_options(dummyemulator PRIVATE /W4 /WX)
+else()
+  target_compile_options(dummyemulator PRIVATE -Wall -Wextra -Werror -Wno-unused-parameter)
+endif()
 
 if(WIN32)
   target_link_libraries(dummyemulator wsock32 ws2_32)

@@ -8,7 +8,7 @@
 
 #include "dummy.h"
 #include "emulator_network_access_defines.h"
-#include "generic_poll_server.h"
+
 
 
 #define start_hash_reply(S) generic_poll_server_start_hash_reply(S)

@@ -5,7 +5,6 @@
 #include "emulator_network_access_defines.h"
 
 
-
 #ifdef _WIN32
 #include <winsock2.h>
 #else
