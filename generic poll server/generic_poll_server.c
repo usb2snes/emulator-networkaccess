@@ -278,17 +278,14 @@ static void send_error(SOCKET fd, emulator_network_access_error_type type, const
         if (type == emulator_network_access_error_type_strings[i].error_type)
             error_type = emulator_network_access_error_type_strings[i].string;
     }
-    size_t to_send_size = 1 
-                          + strlen("error") + 1 + strlen(error_type) + 1
-                          + strlen("reason") + 1 + strlen(error_string) + 1
-                          + 1;
-    char* tosend = (char*) malloc(to_send_size);
-    int towrite = snprintf(tosend, to_send_size,
+    size_t to_send_size = strlen("\nerror:\nreason:\n\n") + strlen(error_type) + strlen(error_string);
+    char* tosend = (char*) malloc(to_send_size + 1);
+    int towrite = snprintf(tosend, to_send_size + 1,
                            "\nerror:%s\nreason:%s\n\n",
                            error_type,
                            error_string);
     s_debug("Sending error :%s\n", tosend);
-    write(fd, tosend, towrite);
+    write(fd, tosend, to_send_size);
     free(tosend);
 }
 
@@ -415,8 +412,12 @@ static void process_command(generic_poll_server_client* client)
 static bool preprocess_data(generic_poll_server_client* client)
 {
     unsigned int read_pos = 0;
+#ifdef SKARSNIK_DEBUG
+    char* hexdump = hexString(client->readed_data, client->readed_size);
     s_debug("Pre:Read size : %d\n", client->readed_size);
-    s_debug("Data : %s\n", hexString(client->readed_data, client->readed_size));
+    s_debug("Data : %s\n", hexdump);
+    free(hexdump);
+#endif
     while (read_pos == 0 || read_pos < client->readed_size)
     {
         s_debug("Client in state : %d\n", client->state);
@@ -712,6 +713,22 @@ static bool generic_poll_server_start(int poll_timeout)
 
         for (unsigned int i = 1; i < poll_fds_count; i++)
         {
+            // This is when the socket is not closed nicely
+            // Check if POLLIN and POLLERR can happen at the same time
+            if (poll_fds[i].revents & POLLERR || poll_fds[i].revents & POLLHUP)
+            {
+                s_debug("Disconnecting client err(%X)/hup(%X) : %X\n", POLLERR, POLLHUP, poll_fds[i].revents);
+                remove_client(poll_fds[i].fd);
+                if (poll_fds[i].fd != poll_fds[poll_fds_count - 1].fd)
+                {
+                    // We are not removing the last one
+                    poll_fds[i] = poll_fds[poll_fds_count - 1];
+                    i--;
+                }
+                poll_fds_count--;
+                continue;
+            }
+
             if (poll_fds[i].revents & POLLIN)
             {
                 s_debug("New data on client : %d\n", i);
@@ -727,20 +744,6 @@ static bool generic_poll_server_start(int poll_timeout)
                     }
                     poll_fds_count--;
                 }
-            }
-            // This is when the socket is not closed nicely
-            // Check if POLLIN and POLLERR can happen at the same time
-            if (poll_fds[i].revents & POLLERR || poll_fds[i].revents & POLLHUP)
-            {
-                s_debug("Disconnecting client err(%X)/hup(%X) : %X\n", POLLERR, POLLHUP, poll_fds[i].revents);
-                remove_client(poll_fds[i].fd);
-                if (poll_fds[i].fd != poll_fds[poll_fds_count - 1].fd)
-                {
-                    // We are not removing the last one
-                    poll_fds[i] = poll_fds[poll_fds_count - 1];
-                    i--;
-                }
-                poll_fds_count--;
             }
         }
     }
