@@ -2,14 +2,9 @@
 #define H_GENERIC_POLL_SERVER_H
 
 #include <stdbool.h>
+#include <stdint.h>
+#include <stddef.h>
 #include "emulator_network_access_defines.h"
-
-
-#ifdef _WIN32
-#include <winsock2.h>
-#else
-typedef int SOCKET;
-#endif
 
 
 /*
@@ -27,6 +22,13 @@ typedef struct
     int64_t(*function)(SOCKET, char**, int);
 } generic_emu_nwa_command_entry;
 
+typedef struct
+{
+    const char* string;
+    int64_t(*function)(SOCKET, char**, int);
+} custom_emu_nwa_command_entry;
+
+
 typedef struct generic_poll_server_memory_argument_struct
 {
     unsigned int offset;
@@ -35,6 +37,15 @@ typedef struct generic_poll_server_memory_argument_struct
 } generic_poll_server_memory_argument;
 
 typedef generic_emu_nwa_command_entry generic_emu_nwa_commands_map_t[];
+
+typedef custom_emu_nwa_command_entry custom_emu_nwa_commands_map_t[];
+
+
+#ifdef _WIN32
+#include <winsock2.h>
+#else
+typedef int SOCKET;
+#endif
 
 typedef enum
 {
@@ -60,20 +71,20 @@ typedef struct {
 } generic_poll_server_callbacks;
 
 typedef struct {
-    SOCKET          socket_fd;
-    char            readed_data[2048];
-    char            command_data[2048];
-    unsigned int    readed_size;
-    unsigned int    command_data_size;
-    int             command_data_pos;
-    bool            shallow_binary_block;
+    SOCKET  socket_fd;
+    char    readed_data[2048];
+    char    command_data[2048];
+    int     readed_size;
+    int     command_data_size;
+    int     command_data_pos;
+    bool    shallow_binary_block;
 
     generic_poll_server_client_state state;
 
-    emulator_network_access_command         current_command;
+    unsigned int        current_command;
 
     char                binary_header[5];
-    unsigned char       binary_header_size;
+    char                binary_header_size;
     char*               binary_block;
     unsigned int        binary_block_defined_size; // The size defined by the header
     unsigned int        binary_block_size; // The current size filled into the buffer
@@ -83,7 +94,7 @@ typedef struct {
 
 
 
-void            generic_poll_server_add_callback(generic_poll_server_callback cb, void (*callback)(void));
+void            generic_poll_server_add_callback(generic_poll_server_callback cb, void* fntptr);
 
 /*
     use it like that :
@@ -96,7 +107,7 @@ void            generic_poll_server_end_hash_reply(SOCKET socket);
 void            generic_poll_server_start_hash_reply(SOCKET socket);
 void            generic_poll_server_send_binary_block(SOCKET socket, uint32_t size, const char* data);
 size_t          generic_poll_server_get_offset(const char *offset_str);
-generic_poll_server_memory_argument*    generic_poll_server_parse_memory_argument(const char** ag, unsigned int ac);
+generic_poll_server_memory_argument* generic_poll_server_parse_memory_argument(const char** ag, unsigned int ac);
 void            generic_poll_server_free_memory_argument(generic_poll_server_memory_argument* tofree);
 
 #endif

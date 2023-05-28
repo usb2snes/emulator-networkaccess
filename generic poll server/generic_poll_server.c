@@ -32,9 +32,9 @@ typedef LPWSAPOLLFD poll_fd_t;
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <ctype.h>
 #include <unistd.h>
 #include <time.h>
-#include <ctype.h>
 #include <sys/ioctl.h>
 #define ioctlsocket ioctl
 #endif
@@ -147,7 +147,7 @@ size_t          generic_poll_server_get_offset(const char *offset_str)
     return atoll(offset_str);
 }
 
-generic_poll_server_memory_argument*    generic_poll_server_parse_memory_argument(const char** ag, unsigned int ac)
+generic_poll_server_memory_argument*    generic_poll_server_parse_memory_argument(char** ag, unsigned int ac)
 {
     generic_poll_server_memory_argument* toret = (generic_poll_server_memory_argument*) malloc(sizeof(generic_poll_server_memory_argument));
     toret->next = NULL;
@@ -193,7 +193,7 @@ static generic_poll_server_client clients[5];
 static generic_poll_server_callbacks callbacks = {NULL, NULL, NULL, NULL};
 
 
-void generic_poll_server_add_callback(generic_poll_server_callback cb, void (*fntptr)(void))
+void generic_poll_server_add_callback(generic_poll_server_callback cb, void* fntptr)
 {
     switch (cb)
     {
@@ -281,7 +281,7 @@ static void send_error(SOCKET fd, emulator_network_access_error_type type, const
     size_t to_send_size = 1 
                           + strlen("error") + 1 + strlen(error_type) + 1
                           + strlen("reason") + 1 + strlen(error_string) + 1
-                          + 1;
+                          + 2;
     char* tosend = (char*) malloc(to_send_size);
     int towrite = snprintf(tosend, to_send_size,
                            "\nerror:%s\nreason:%s\n\n",
@@ -294,14 +294,26 @@ static void send_error(SOCKET fd, emulator_network_access_error_type type, const
 
 static int64_t execute_command(generic_poll_server_client* client, char *cmd_str, char **args, int args_count)
 {
-    emulator_network_access_command command;
+    unsigned int command;
     bool    valid_command = false;
+    unsigned int custom_command_index = 0;
     for (unsigned int i = 0; i < emulator_network_access_number_of_command; i++)
     {
         if (strcmp(cmd_str, emulator_network_access_command_strings[i].string) == 0)
         {
             command = emulator_network_access_command_strings[i].command;
             valid_command = true;
+            break;
+        }
+    }
+    for (unsigned int i = 0; i < custom_emu_nwa_map_size; i++)
+    {
+        if (strncmp(cmd_str, custom_emu_nwa_map[i].string, strlen(custom_emu_nwa_map[i].string)) == 0)
+        {
+            command = CUSTOM + i;
+            custom_command_index = i;
+            valid_command = true;
+            break;
         }
     }
     if (!valid_command)
@@ -310,13 +322,18 @@ static int64_t execute_command(generic_poll_server_client* client, char *cmd_str
         return 0;
     }
     client->current_command = command;
+    if (command >= CUSTOM)
+    {
+        return custom_emu_nwa_map[custom_command_index].function(client->socket_fd, args, args_count);
+    }
     for (unsigned int i = 0; i < generic_emu_mwa_map_size; i++)
     {
-        if ( generic_emu_mwa_map[i].command == command)
+        if (generic_emu_mwa_map[i].command == command)
         {
             return generic_emu_mwa_map[i].function(client->socket_fd, args, args_count);
         }
     }
+    send_error(client->socket_fd, invalid_command, "Invalid command or not implemented");
     return -1;
 }
 
@@ -324,7 +341,7 @@ static void process_binary_block(generic_poll_server_client* client)
 {
     if (client->current_command == bCORE_WRITE)
     {
-        generic_poll_server_write_function(client->socket_fd, client->binary_block, client->binary_block_size);
+        bool result = generic_poll_server_write_function(client->socket_fd, client->binary_block, client->binary_block_size);
         free(client->binary_block);
         client->binary_block = NULL;
         client->binary_block_size = 0;
@@ -591,7 +608,6 @@ static bool generic_poll_server_start(int poll_timeout)
         print_socket_error("Error setting socket to not ipv6 only\n");
         return false;
     }
-
 #if __STDC__ > 201112L
 	size_t required_size;
 	getenv_s(&required_size, NULL, 0, "NWA_PORT_RANGE");
@@ -600,9 +616,9 @@ static bool generic_poll_server_start(int poll_timeout)
 		char* buffer = (char*) malloc(required_size);
 		getenv_s(&required_size, buffer, required_size, "NWA_PORT_RANGE");
 #else
-    char* buffer = getenv("NWA_PORT_RANGE");
-    if (buffer != NULL)
-    {
+        char* buffer = getenv("NWA_PORT_RANGE");
+        if (buffer != NULL)
+        {
 #endif
 		unsigned short env_port = atoi(buffer);
 		if (env_port != 0)
@@ -611,9 +627,9 @@ static bool generic_poll_server_start(int poll_timeout)
 		{
 			fprintf(stderr, "Trying to read the port range from NWA_PORT_RANGE variable but not a valid port : %s\n", buffer);
 		}
-		#if __STDC__ > 201112L
-		free(buffer);
-        #endif
+#if __STDC__ > 201112L
+        free(buffer);
+#endif
 	}
 
     memset(&name, 0, sizeof(name));
@@ -692,7 +708,7 @@ static bool generic_poll_server_start(int poll_timeout)
             {
                 unsigned long piko = 1;
                 ioctlsocket(new_socket, FIONBIO, &piko);
-                socklen_t addrlen = sizeof(new_client);
+                int addrlen = sizeof(new_client);
                 getpeername(new_socket, (struct sockaddr *)&new_client, &addrlen);
                 char str[INET6_ADDRSTRLEN];
                 if (inet_ntop(AF_INET6, &new_client.sin6_addr, str, sizeof(str))) {
@@ -712,6 +728,18 @@ static bool generic_poll_server_start(int poll_timeout)
 
         for (unsigned int i = 1; i < poll_fds_count; i++)
         {
+            // This is when the socket is not closed nicely
+            // Check if POLLIN and POLLERR can happen at the same time
+            if (poll_fds[i].revents & POLLERR || poll_fds[i].revents & POLLHUP)
+            {
+                s_debug("Disconnecting client err(%X)/hup(%X) : %X\n", POLLERR, POLLHUP, poll_fds[i].revents);
+                remove_client(poll_fds[i].fd);
+                if (i != poll_fds_count - 1)
+                    poll_fds[i] = poll_fds[poll_fds_count - 1];
+                poll_fds_count--;
+                i--;
+                continue;
+            }
             if (poll_fds[i].revents & POLLIN)
             {
                 s_debug("New data on client : %d\n", i);
@@ -719,28 +747,11 @@ static bool generic_poll_server_start(int poll_timeout)
                 {
                     s_debug("Disconnecting client\n");
                     remove_client(poll_fds[i].fd);
-                    if (poll_fds[i].fd != poll_fds[poll_fds_count - 1].fd)
-                    {
-                        // We are not removing the last one
+                    if (i != poll_fds_count - 1)
                         poll_fds[i] = poll_fds[poll_fds_count - 1];
-                        i--;
-                    }
                     poll_fds_count--;
-                }
-            }
-            // This is when the socket is not closed nicely
-            // Check if POLLIN and POLLERR can happen at the same time
-            if (poll_fds[i].revents & POLLERR || poll_fds[i].revents & POLLHUP)
-            {
-                s_debug("Disconnecting client err(%X)/hup(%X) : %X\n", POLLERR, POLLHUP, poll_fds[i].revents);
-                remove_client(poll_fds[i].fd);
-                if (poll_fds[i].fd != poll_fds[poll_fds_count - 1].fd)
-                {
-                    // We are not removing the last one
-                    poll_fds[i] = poll_fds[poll_fds_count - 1];
                     i--;
                 }
-                poll_fds_count--;
             }
         }
     }
