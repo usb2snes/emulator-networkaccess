@@ -7,6 +7,13 @@
 #include "emulator_network_access_defines.h"
 
 
+#if (defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__)))
+typedef int SOCKET;
+typedef struct sockaddr_in SOCKADDR_IN;
+typedef struct sockaddr SOCKADDR;
+typedef struct in_addr IN_ADDR;
+#endif
+
 /*
 The function doing the command must returns this :
     0 for regular command
