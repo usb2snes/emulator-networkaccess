@@ -365,21 +365,29 @@ Sample: `CORE_WRITE WRAM;$100;10;512;10` `<20 byte binary block>` writes 10 byte
 
 ### DEBUG_BREAK
 
-If supported by the emulator, should behave like hitting a breakpoint.
+If supported by the emulator, it should behave like hitting a breakpoint.
 
 ### DEBUG_CONTINUE
 
-If supported by the emulator, should behave like the "continue" button when inside a breakpoint.
+If supported by the emulator, it should behave like the "continue" button when inside a breakpoint.
 
-### LOAD_STATE `<filename>`
+### SAVESTATE_BASE_PATH
 
-Load a savestate from filename.
+Returns the directory that serve as the root for the LOAD_STATE and SAVE_STATE commands.
 
-If the emulator only supports "quick" (not an arbitrary filepath) savestates,
-arbitrary filename support has to be added or the command left unsupported.
+### LOAD_STATE `<relative path to filename>`
 
-There is no real value to exposing "quick" savestates interface.
+Load a savestate from filename, for security reasons, this should only allow for relative paths.
+The reference path can be the savestate folder of the emulator or 
 
-### SAVE_STATE `<filename>`
+### SAVE_STATE `relative path to filename`
 
 Make a savestate and store to filename, see LOAD_STATE for constraints.
+
+### bLOAD_STATE
+
+Load a savestate from the following stream of data that follows the command
+
+### SEND_STATE
+
+Send the current state as a binary message
