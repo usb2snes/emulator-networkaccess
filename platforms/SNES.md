@@ -1,6 +1,7 @@
 # SNES specifics for Emulator NetworkAccess
 
-### Memories
+## Memories
+
 Not all memories have to be available through EmuNWAccess
 
 * CARTROM: ROM inside the cartridge (required)
@@ -9,5 +10,6 @@ Not all memories have to be available through EmuNWAccess
 * VRAM: Video RAM inside the console
 * OAM: Object attribute memory
 * CGRAM: Color palette memory
+* APURAM: The APU memory
 * CPUBUS: The memory bus as seen by the CPU
 * APUBUS: The memory bus as seen by the APU
