@@ -169,9 +169,10 @@ reason:<message>\n
 Error type are as follow :
 
 * invalid_command : The command is invalid or unsupported by the emulator
-* invalid_argument : The arguments for the command are not what the command expect
+* invalid_argument : The arguments for the command are not what the command expects
 * not_allowed : The operation is not allowed
 * protocol_error : The operation did not respect the protocol
+* command_error : An error occurred in the command
 
 ### Success
 
